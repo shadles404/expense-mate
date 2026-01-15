@@ -55,6 +55,98 @@ export type Database = {
           },
         ]
       }
+      job_activity_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          job_id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          job_id: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_activity_log_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_notes: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_completed: boolean
+          job_location: string | null
+          job_title: string
+          job_type: Database["public"]["Enums"]["job_type"]
+          map_link: string | null
+          person_name: string
+          reminder_enabled: boolean
+          reminder_minutes_before: number | null
+          scheduled_date: string
+          scheduled_time: string
+          status: Database["public"]["Enums"]["job_status"]
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean
+          job_location?: string | null
+          job_title: string
+          job_type?: Database["public"]["Enums"]["job_type"]
+          map_link?: string | null
+          person_name: string
+          reminder_enabled?: boolean
+          reminder_minutes_before?: number | null
+          scheduled_date: string
+          scheduled_time: string
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean
+          job_location?: string | null
+          job_title?: string
+          job_type?: Database["public"]["Enums"]["job_type"]
+          map_link?: string | null
+          person_name?: string
+          reminder_enabled?: boolean
+          reminder_minutes_before?: number | null
+          scheduled_date?: string
+          scheduled_time?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           budget: number | null
@@ -96,6 +188,15 @@ export type Database = {
         | "Utilities"
         | "Wedding"
         | "Other"
+      job_status: "pending" | "completed" | "overdue" | "cancelled"
+      job_type:
+        | "meeting"
+        | "delivery"
+        | "inspection"
+        | "support"
+        | "maintenance"
+        | "consultation"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -232,6 +333,16 @@ export const Constants = {
         "Utilities",
         "Wedding",
         "Other",
+      ],
+      job_status: ["pending", "completed", "overdue", "cancelled"],
+      job_type: [
+        "meeting",
+        "delivery",
+        "inspection",
+        "support",
+        "maintenance",
+        "consultation",
+        "other",
       ],
     },
   },
