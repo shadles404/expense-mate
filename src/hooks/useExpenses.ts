@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Expense, ExpenseCategory } from '@/types/expense';
+import { Expense, ExpenseCategoryLegacy } from '@/types/expense';
 import { toast } from 'sonner';
+import { useAuth } from './useAuth';
 
 export function useExpenses(projectId: string | undefined) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: expenses = [], isLoading, error } = useQuery({
     queryKey: ['expenses', projectId],
@@ -21,19 +23,23 @@ export function useExpenses(projectId: string | undefined) {
       
       return (data || []).map(exp => ({
         ...exp,
+        user_id: exp.user_id || '',
         quantity: Number(exp.quantity),
         price: Number(exp.price),
-        category: exp.category as ExpenseCategory,
+        category: exp.category as ExpenseCategoryLegacy,
+        category_id: exp.category_id || null,
       }));
     },
-    enabled: !!projectId,
+    enabled: !!projectId && !!user,
   });
 
   const createExpense = useMutation({
-    mutationFn: async (data: Omit<Expense, 'id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (data: Omit<Expense, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
+      if (!user) throw new Error('Not authenticated');
+      
       const { data: expense, error } = await supabase
         .from('expenses')
-        .insert([data])
+        .insert([{ ...data, user_id: user.id }])
         .select()
         .single();
 

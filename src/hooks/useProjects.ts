@@ -2,13 +2,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Project, ProjectWithTotals } from '@/types/expense';
 import { toast } from 'sonner';
+import { useAuth } from './useAuth';
 
 export function useProjects() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: projects = [], isLoading, error } = useQuery({
-    queryKey: ['projects'],
+    queryKey: ['projects', user?.id],
     queryFn: async (): Promise<ProjectWithTotals[]> => {
+      if (!user) return [];
+      
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('*')
@@ -30,6 +34,7 @@ export function useProjects() {
 
           return {
             ...project,
+            user_id: project.user_id || '',
             budget: Number(project.budget),
             totalCost,
             expenseCount: expenses?.length || 0,
@@ -39,13 +44,16 @@ export function useProjects() {
 
       return projectsWithTotals;
     },
+    enabled: !!user,
   });
 
   const createProject = useMutation({
     mutationFn: async (data: { title: string; budget: number }) => {
+      if (!user) throw new Error('Not authenticated');
+      
       const { data: project, error } = await supabase
         .from('projects')
-        .insert([{ title: data.title, budget: data.budget }])
+        .insert([{ title: data.title, budget: data.budget, user_id: user.id }])
         .select()
         .single();
 
