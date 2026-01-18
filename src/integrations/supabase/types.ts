@@ -14,9 +14,37 @@ export type Database = {
   }
   public: {
     Tables: {
+      expense_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           category: Database["public"]["Enums"]["expense_category"]
+          category_id: string | null
           created_at: string
           description: string
           id: string
@@ -24,9 +52,11 @@ export type Database = {
           project_id: string
           quantity: number
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           category?: Database["public"]["Enums"]["expense_category"]
+          category_id?: string | null
           created_at?: string
           description?: string
           id?: string
@@ -34,9 +64,11 @@ export type Database = {
           project_id: string
           quantity?: number
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           category?: Database["public"]["Enums"]["expense_category"]
+          category_id?: string | null
           created_at?: string
           description?: string
           id?: string
@@ -44,8 +76,16 @@ export type Database = {
           project_id?: string
           quantity?: number
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_project_id_fkey"
             columns: ["project_id"]
@@ -108,6 +148,7 @@ export type Database = {
           scheduled_time: string
           status: Database["public"]["Enums"]["job_status"]
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           completed_at?: string | null
@@ -126,6 +167,7 @@ export type Database = {
           scheduled_time: string
           status?: Database["public"]["Enums"]["job_status"]
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           completed_at?: string | null
@@ -144,6 +186,34 @@ export type Database = {
           scheduled_time?: string
           status?: Database["public"]["Enums"]["job_status"]
           updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -154,6 +224,7 @@ export type Database = {
           id: string
           title: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           budget?: number | null
@@ -161,6 +232,7 @@ export type Database = {
           id?: string
           title: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           budget?: number | null
@@ -168,6 +240,7 @@ export type Database = {
           id?: string
           title?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
