@@ -3,6 +3,7 @@ export type JobStatus = 'pending' | 'completed' | 'overdue' | 'cancelled';
 
 export interface JobNote {
   id: string;
+  user_id: string;
   person_name: string;
   job_title: string;
   job_type: JobType;

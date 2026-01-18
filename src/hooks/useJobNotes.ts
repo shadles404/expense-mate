@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { JobNote, JobActivityLog, JobStatus } from '@/types/job';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { format, isAfter, isBefore, isToday, parseISO, startOfDay } from 'date-fns';
 
 export function useJobNotes(filters?: {
@@ -120,12 +121,14 @@ export function useJobActivityLog(jobId: string | undefined) {
 export function useCreateJobNote() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (job: Omit<JobNote, 'id' | 'created_at' | 'updated_at' | 'status' | 'is_completed' | 'completed_at'>) => {
+    mutationFn: async (job: Omit<JobNote, 'id' | 'created_at' | 'updated_at' | 'status' | 'is_completed' | 'completed_at' | 'user_id'>) => {
+      if (!user) throw new Error('Not authenticated');
       const { data, error } = await supabase
         .from('job_notes')
-        .insert([job])
+        .insert([{ ...job, user_id: user.id }])
         .select()
         .single();
       if (error) throw error;
