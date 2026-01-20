@@ -5,6 +5,7 @@ import { useProjects } from '@/hooks/useProjects';
 import { Layout } from '@/components/layout/Layout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { ProjectCard } from '@/components/projects/ProjectCard';
+import { UpcomingSchedules } from '@/components/dashboard/UpcomingSchedules';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -82,6 +83,9 @@ export default function Dashboard() {
             </>
           )}
         </div>
+
+        {/* Upcoming Schedules Section */}
+        <UpcomingSchedules />
 
         {/* Recent Projects */}
         <div>

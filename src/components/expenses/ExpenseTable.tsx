@@ -34,7 +34,7 @@ const CATEGORIES: ExpenseCategory[] = [
 interface ExpenseTableProps {
   expenses: Expense[];
   projectId: string;
-  onAddExpense: (expense: Omit<Expense, 'id' | 'created_at' | 'updated_at'>) => void;
+  onAddExpense: (expense: Omit<Expense, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => void;
   onUpdateExpense: (expense: Partial<Expense> & { id: string }) => void;
   onDeleteExpense: (id: string) => void;
 }
@@ -62,6 +62,7 @@ export function ExpenseTable({
       quantity: newExpense.quantity,
       price: newExpense.price,
       category: newExpense.category,
+      category_id: null,
     });
 
     setNewExpense({
