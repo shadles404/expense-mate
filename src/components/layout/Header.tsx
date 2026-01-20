@@ -1,6 +1,25 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FolderOpen, BarChart3, FileText, CalendarCheck } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, BarChart3, FileText, CalendarCheck, LogOut, User, Tags } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { CategoryManager } from '@/components/categories/CategoryManager';
+import { useState } from 'react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -12,6 +31,8 @@ const navigation = [
 
 export function Header() {
   const location = useLocation();
+  const { user, signOut } = useAuth();
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-xl">
@@ -46,6 +67,50 @@ export function Header() {
               })}
             </nav>
           </div>
+
+          {/* User Menu */}
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <span className="hidden sm:inline text-sm font-medium">
+                    {user.email?.split('@')[0]}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span className="font-medium">Account</span>
+                    <span className="text-xs text-muted-foreground">{user.email}</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+                  <DialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <Tags className="mr-2 h-4 w-4" />
+                      Manage Categories
+                    </DropdownMenuItem>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Manage Expense Categories</DialogTitle>
+                    </DialogHeader>
+                    <CategoryManager />
+                  </DialogContent>
+                </Dialog>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => signOut()} className="text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
       {/* Mobile navigation */}
