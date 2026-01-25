@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateProjectDialog } from '@/components/projects/CreateProjectDialog';
 import { DeleteConfirmDialog } from '@/components/projects/DeleteConfirmDialog';
+import { GenerateInvoiceDialog } from '@/components/invoice/GenerateInvoiceDialog';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -150,7 +151,13 @@ export default function ProjectDetail() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <GenerateInvoiceDialog
+                projectId={id!}
+                projectTitle={project.title}
+                expenses={expenses}
+                totalCost={totalCost}
+              />
               <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2">
                 <Download className="h-4 w-4" />
                 Export CSV

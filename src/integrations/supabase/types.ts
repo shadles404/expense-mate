@@ -95,6 +95,122 @@ export type Database = {
           },
         ]
       }
+      invoice_settings: {
+        Row: {
+          company_address: string | null
+          company_email: string | null
+          company_name: string | null
+          company_phone: string | null
+          created_at: string
+          default_payment_terms: string | null
+          id: string
+          include_signature_line: boolean | null
+          invoice_prefix: string | null
+          logo_url: string | null
+          next_invoice_number: number | null
+          tax_enabled: boolean | null
+          tax_rate: number | null
+          thank_you_message: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_address?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          created_at?: string
+          default_payment_terms?: string | null
+          id?: string
+          include_signature_line?: boolean | null
+          invoice_prefix?: string | null
+          logo_url?: string | null
+          next_invoice_number?: number | null
+          tax_enabled?: boolean | null
+          tax_rate?: number | null
+          thank_you_message?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_address?: string | null
+          company_email?: string | null
+          company_name?: string | null
+          company_phone?: string | null
+          created_at?: string
+          default_payment_terms?: string | null
+          id?: string
+          include_signature_line?: boolean | null
+          invoice_prefix?: string | null
+          logo_url?: string | null
+          next_invoice_number?: number | null
+          tax_enabled?: boolean | null
+          tax_rate?: number | null
+          thank_you_message?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          client_name: string | null
+          created_at: string
+          discount_amount: number | null
+          due_date: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          project_id: string
+          status: string | null
+          subtotal: number
+          tax_amount: number | null
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string
+          discount_amount?: number | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          project_id: string
+          status?: string | null
+          subtotal?: number
+          tax_amount?: number | null
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string
+          discount_amount?: number | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          project_id?: string
+          status?: string | null
+          subtotal?: number
+          tax_amount?: number | null
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_activity_log: {
         Row: {
           action: string
