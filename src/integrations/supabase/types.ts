@@ -360,14 +360,238 @@ export type Database = {
         }
         Relationships: []
       }
+      tiktok_advertisers: {
+        Row: {
+          ad_types: Database["public"]["Enums"]["ad_type"][]
+          completed_videos: number
+          contract_type: Database["public"]["Enums"]["contract_type"]
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          platform: Database["public"]["Enums"]["platform_type"]
+          salary: number
+          target_videos: number
+          targets_locked: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ad_types?: Database["public"]["Enums"]["ad_type"][]
+          completed_videos?: number
+          contract_type?: Database["public"]["Enums"]["contract_type"]
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          platform?: Database["public"]["Enums"]["platform_type"]
+          salary?: number
+          target_videos?: number
+          targets_locked?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ad_types?: Database["public"]["Enums"]["ad_type"][]
+          completed_videos?: number
+          contract_type?: Database["public"]["Enums"]["contract_type"]
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          platform?: Database["public"]["Enums"]["platform_type"]
+          salary?: number
+          target_videos?: number
+          targets_locked?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tiktok_deliveries: {
+        Row: {
+          advertiser_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["delivery_status"]
+          submission_date: string
+          updated_at: string
+          user_id: string
+          verified_at: string | null
+          verified_by: string | null
+          video_link: string
+        }
+        Insert: {
+          advertiser_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["delivery_status"]
+          submission_date?: string
+          updated_at?: string
+          user_id: string
+          verified_at?: string | null
+          verified_by?: string | null
+          video_link: string
+        }
+        Update: {
+          advertiser_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["delivery_status"]
+          submission_date?: string
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          video_link?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_deliveries_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "tiktok_advertisers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiktok_payments: {
+        Row: {
+          advertiser_id: string
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          payment_date: string | null
+          receipt_url: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          advertiser_id: string
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          receipt_url?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          advertiser_id?: string
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          receipt_url?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_payments_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "tiktok_advertisers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiktok_settings: {
+        Row: {
+          created_at: string
+          currency: string | null
+          default_contract_type:
+            | Database["public"]["Enums"]["contract_type"]
+            | null
+          default_platform: Database["public"]["Enums"]["platform_type"] | null
+          id: string
+          tax_rate: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          default_contract_type?:
+            | Database["public"]["Enums"]["contract_type"]
+            | null
+          default_platform?: Database["public"]["Enums"]["platform_type"] | null
+          id?: string
+          tax_rate?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          default_contract_type?:
+            | Database["public"]["Enums"]["contract_type"]
+            | null
+          default_platform?: Database["public"]["Enums"]["platform_type"] | null
+          id?: string
+          tax_rate?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      ad_type: "Milk" | "Makeup" | "Perfume" | "Cream" | "Skincare" | "Other"
+      app_role: "admin" | "moderator" | "user"
+      contract_type: "Full-time" | "Part-time" | "Freelance" | "Contract"
+      delivery_status: "pending" | "approved" | "rejected"
       expense_category:
         | "Materials"
         | "Labor"
@@ -386,6 +610,8 @@ export type Database = {
         | "maintenance"
         | "consultation"
         | "other"
+      payment_status: "paid" | "unpaid"
+      platform_type: "TikTok" | "Instagram" | "YouTube" | "Facebook" | "Other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -513,6 +739,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      ad_type: ["Milk", "Makeup", "Perfume", "Cream", "Skincare", "Other"],
+      app_role: ["admin", "moderator", "user"],
+      contract_type: ["Full-time", "Part-time", "Freelance", "Contract"],
+      delivery_status: ["pending", "approved", "rejected"],
       expense_category: [
         "Materials",
         "Labor",
@@ -533,6 +763,8 @@ export const Constants = {
         "consultation",
         "other",
       ],
+      payment_status: ["paid", "unpaid"],
+      platform_type: ["TikTok", "Instagram", "YouTube", "Facebook", "Other"],
     },
   },
 } as const
