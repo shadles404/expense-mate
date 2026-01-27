@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FolderOpen, BarChart3, FileText, CalendarCheck, LogOut, User, Tags } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, BarChart3, FileText, CalendarCheck, LogOut, User, Tags, Video, ChevronDown, Users, ClipboardList, Truck, CreditCard, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -29,10 +32,22 @@ const navigation = [
   { name: 'Reports', href: '/reports', icon: FileText },
 ];
 
+const tiktokNavigation = [
+  { name: 'Dashboard', href: '/tiktok', icon: LayoutDashboard },
+  { name: 'Registration', href: '/tiktok/registration', icon: Users },
+  { name: 'Tracking', href: '/tiktok/tracking', icon: ClipboardList },
+  { name: 'Delivery', href: '/tiktok/delivery', icon: Truck },
+  { name: 'Payment', href: '/tiktok/payment', icon: CreditCard },
+  { name: 'Reports', href: '/tiktok/reports', icon: FileText },
+  { name: 'Settings', href: '/tiktok/settings', icon: Settings },
+];
+
 export function Header() {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+
+  const isTikTokActive = location.pathname.startsWith('/tiktok');
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-xl">
@@ -65,6 +80,44 @@ export function Header() {
                   </Link>
                 );
               })}
+
+              {/* TikTok Managing Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
+                      isTikTokActive
+                        ? 'bg-primary text-primary-foreground shadow-md'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    <Video className="h-4 w-4" />
+                    TikTok Managing
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  {tiktokNavigation.map((item) => {
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <DropdownMenuItem key={item.name} asChild>
+                        <Link
+                          to={item.href}
+                          className={cn(
+                            'flex items-center gap-2 w-full',
+                            isActive && 'bg-muted'
+                          )}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.name}
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </nav>
           </div>
 
@@ -134,6 +187,35 @@ export function Header() {
             </Link>
           );
         })}
+        {/* TikTok Mobile Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap',
+                isTikTokActive
+                  ? 'bg-primary text-primary-foreground shadow-md'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Video className="h-4 w-4" />
+              TikTok
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-48">
+            {tiktokNavigation.map((item) => (
+              <DropdownMenuItem key={item.name} asChild>
+                <Link to={item.href} className="flex items-center gap-2 w-full">
+                  <item.icon className="h-4 w-4" />
+                  {item.name}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </nav>
     </header>
   );
