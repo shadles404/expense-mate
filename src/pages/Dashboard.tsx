@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { FolderOpen, DollarSign, TrendingUp, AlertTriangle, Plus } from 'lucide-react';
+import { FolderOpen, DollarSign, TrendingUp, AlertTriangle, Plus, CreditCard, Clock } from 'lucide-react';
 import { useProjects } from '@/hooks/useProjects';
 import { Layout } from '@/components/layout/Layout';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -19,7 +19,12 @@ export default function Dashboard() {
     const overBudgetCount = projects.filter(p => p.budget > 0 && p.totalCost > p.budget).length;
     const avgProjectCost = totalProjects > 0 ? totalSpent / totalProjects : 0;
 
-    return { totalProjects, totalSpent, totalBudget, overBudgetCount, avgProjectCost };
+    // Payment stats
+    const totalPaid = projects.reduce((sum, p) => sum + p.amount_paid, 0);
+    const totalUnpaid = projects.reduce((sum, p) => sum + p.balanceDue, 0);
+    const unpaidProjectsCount = projects.filter(p => p.payment_status !== 'paid').length;
+
+    return { totalProjects, totalSpent, totalBudget, overBudgetCount, avgProjectCost, totalPaid, totalUnpaid, unpaidProjectsCount };
   }, [projects]);
 
   const recentProjects = projects.slice(0, 4);
@@ -66,6 +71,34 @@ export default function Dashboard() {
                 icon={<DollarSign className="h-6 w-6" />}
                 iconClassName="gradient-success"
               />
+              <StatCard
+                title="Total Paid"
+                value={`$${stats.totalPaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                subtitle="Payments received"
+                icon={<CreditCard className="h-6 w-6" />}
+                iconClassName="gradient-primary"
+              />
+              <StatCard
+                title="Outstanding Balance"
+                value={`$${stats.totalUnpaid.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
+                subtitle={`${stats.unpaidProjectsCount} unpaid project${stats.unpaidProjectsCount !== 1 ? 's' : ''}`}
+                icon={<Clock className="h-6 w-6" />}
+                iconClassName={stats.totalUnpaid > 0 ? "gradient-danger" : "gradient-primary"}
+              />
+            </>
+          )}
+        </div>
+
+        {/* Secondary Stats */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+          {isLoading ? (
+            <>
+              {[...Array(2)].map((_, i) => (
+                <Skeleton key={i} className="h-32 rounded-xl" />
+              ))}
+            </>
+          ) : (
+            <>
               <StatCard
                 title="Avg. Project Cost"
                 value={`$${stats.avgProjectCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}`}

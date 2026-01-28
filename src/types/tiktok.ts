@@ -2,6 +2,7 @@ export type AdType = 'Milk' | 'Makeup' | 'Perfume' | 'Cream' | 'Skincare' | 'Oth
 export type PlatformType = 'TikTok' | 'Instagram' | 'YouTube' | 'Facebook' | 'Other';
 export type ContractType = 'Full-time' | 'Part-time' | 'Freelance' | 'Contract';
 export type DeliveryStatus = 'pending' | 'approved' | 'rejected';
+export type ProductDeliveryStatus = 'pending' | 'sent' | 'returned';
 export type PaymentStatus = 'paid' | 'unpaid';
 export type AppRole = 'admin' | 'moderator' | 'user';
 
@@ -31,6 +32,21 @@ export interface TikTokDelivery {
   verified_by: string | null;
   verified_at: string | null;
   status: DeliveryStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  advertiser?: TikTokAdvertiser;
+}
+
+export interface TikTokProductDelivery {
+  id: string;
+  user_id: string;
+  advertiser_id: string;
+  product_name: string;
+  quantity: number;
+  date_sent: string;
+  status: ProductDeliveryStatus;
+  price: number;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -74,3 +90,4 @@ export interface UserRole {
 export const AD_TYPES: AdType[] = ['Milk', 'Makeup', 'Perfume', 'Cream', 'Skincare', 'Other'];
 export const PLATFORM_TYPES: PlatformType[] = ['TikTok', 'Instagram', 'YouTube', 'Facebook', 'Other'];
 export const CONTRACT_TYPES: ContractType[] = ['Full-time', 'Part-time', 'Freelance', 'Contract'];
+export const PRODUCT_DELIVERY_STATUSES: ProductDeliveryStatus[] = ['pending', 'sent', 'returned'];

@@ -335,25 +335,34 @@ export type Database = {
       }
       projects: {
         Row: {
+          amount_paid: number
           budget: number | null
           created_at: string
           id: string
+          payment_due_date: string | null
+          payment_status: Database["public"]["Enums"]["payment_project_status"]
           title: string
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          amount_paid?: number
           budget?: number | null
           created_at?: string
           id?: string
+          payment_due_date?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_project_status"]
           title: string
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          amount_paid?: number
           budget?: number | null
           created_at?: string
           id?: string
+          payment_due_date?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_project_status"]
           title?: string
           updated_at?: string
           user_id?: string | null
@@ -514,6 +523,56 @@ export type Database = {
           },
         ]
       }
+      tiktok_product_deliveries: {
+        Row: {
+          advertiser_id: string
+          created_at: string
+          date_sent: string
+          id: string
+          notes: string | null
+          price: number
+          product_name: string
+          quantity: number
+          status: Database["public"]["Enums"]["product_delivery_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          advertiser_id: string
+          created_at?: string
+          date_sent?: string
+          id?: string
+          notes?: string | null
+          price?: number
+          product_name: string
+          quantity?: number
+          status?: Database["public"]["Enums"]["product_delivery_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          advertiser_id?: string
+          created_at?: string
+          date_sent?: string
+          id?: string
+          notes?: string | null
+          price?: number
+          product_name?: string
+          quantity?: number
+          status?: Database["public"]["Enums"]["product_delivery_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_product_deliveries_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "tiktok_advertisers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tiktok_settings: {
         Row: {
           created_at: string
@@ -610,8 +669,10 @@ export type Database = {
         | "maintenance"
         | "consultation"
         | "other"
+      payment_project_status: "unpaid" | "partially_paid" | "paid"
       payment_status: "paid" | "unpaid"
       platform_type: "TikTok" | "Instagram" | "YouTube" | "Facebook" | "Other"
+      product_delivery_status: "pending" | "sent" | "returned"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -763,8 +824,10 @@ export const Constants = {
         "consultation",
         "other",
       ],
+      payment_project_status: ["unpaid", "partially_paid", "paid"],
       payment_status: ["paid", "unpaid"],
       platform_type: ["TikTok", "Instagram", "YouTube", "Facebook", "Other"],
+      product_delivery_status: ["pending", "sent", "returned"],
     },
   },
 } as const

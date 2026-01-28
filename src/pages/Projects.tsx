@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, FolderOpen } from 'lucide-react';
+import { Plus, Search, FolderOpen, Filter } from 'lucide-react';
 import { useProjects } from '@/hooks/useProjects';
 import { Layout } from '@/components/layout/Layout';
 import { ProjectCard } from '@/components/projects/ProjectCard';
@@ -8,7 +8,10 @@ import { DeleteConfirmDialog } from '@/components/projects/DeleteConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ProjectWithTotals } from '@/types/expense';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ProjectWithTotals, PaymentProjectStatus } from '@/types/expense';
+
+type PaymentFilter = 'all' | PaymentProjectStatus;
 
 export default function Projects() {
   const { projects, isLoading, createProject, updateProject, deleteProject } = useProjects();
@@ -16,12 +19,24 @@ export default function Projects() {
   const [editProject, setEditProject] = useState<ProjectWithTotals | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all');
 
   const filteredProjects = useMemo(() => {
-    if (!searchQuery.trim()) return projects;
-    const query = searchQuery.toLowerCase();
-    return projects.filter(p => p.title.toLowerCase().includes(query));
-  }, [projects, searchQuery]);
+    let result = projects;
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(p => p.title.toLowerCase().includes(query));
+    }
+    
+    // Filter by payment status
+    if (paymentFilter !== 'all') {
+      result = result.filter(p => p.payment_status === paymentFilter);
+    }
+    
+    return result;
+  }, [projects, searchQuery, paymentFilter]);
 
   const handleCreateOrUpdate = async (data: { title: string; budget: number }) => {
     if (editProject) {
@@ -57,15 +72,29 @@ export default function Projects() {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search projects..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 input-focus"
-          />
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 input-focus"
+            />
+          </div>
+          <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as PaymentFilter)}>
+            <SelectTrigger className="w-[180px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Payment Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Projects</SelectItem>
+              <SelectItem value="unpaid">Unpaid</SelectItem>
+              <SelectItem value="partially_paid">Partially Paid</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Projects Grid */}
@@ -93,14 +122,14 @@ export default function Projects() {
           <div className="text-center py-12 bg-card rounded-xl border border-border">
             <FolderOpen className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-semibold text-foreground">
-              {searchQuery ? 'No matching projects' : 'No projects yet'}
+              {searchQuery || paymentFilter !== 'all' ? 'No matching projects' : 'No projects yet'}
             </h3>
             <p className="mt-1 text-muted-foreground">
-              {searchQuery 
-                ? 'Try a different search term' 
+              {searchQuery || paymentFilter !== 'all'
+                ? 'Try a different search term or filter' 
                 : 'Get started by creating your first expense project'}
             </p>
-            {!searchQuery && (
+            {!searchQuery && paymentFilter === 'all' && (
               <Button onClick={() => setIsCreateOpen(true)} className="mt-4 btn-float gap-2">
                 <Plus className="h-4 w-4" />
                 Create Project

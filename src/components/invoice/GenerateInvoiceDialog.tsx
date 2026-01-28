@@ -46,6 +46,7 @@ interface GenerateInvoiceDialogProps {
   projectTitle: string;
   expenses: Expense[];
   totalCost: number;
+  amountPaid?: number;
 }
 
 export function GenerateInvoiceDialog({
@@ -53,6 +54,7 @@ export function GenerateInvoiceDialog({
   projectTitle,
   expenses,
   totalCost,
+  amountPaid = 0,
 }: GenerateInvoiceDialogProps) {
   const [open, setOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -315,6 +317,19 @@ export function GenerateInvoiceDialog({
                 <span>Grand Total</span>
                 <span>${grandTotal.toFixed(2)}</span>
               </div>
+
+              {amountPaid > 0 && (
+                <>
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Amount Paid</span>
+                    <span>-${amountPaid.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-red-600">
+                    <span>Balance Due</span>
+                    <span>${Math.max(0, grandTotal - amountPaid).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Action Buttons */}

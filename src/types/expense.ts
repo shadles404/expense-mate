@@ -12,6 +12,8 @@ export type ExpenseCategoryLegacy =
 // Alias for backwards compatibility
 export type ExpenseCategory = ExpenseCategoryLegacy;
 
+export type PaymentProjectStatus = 'unpaid' | 'partially_paid' | 'paid';
+
 export interface Expense {
   id: string;
   user_id: string;
@@ -30,6 +32,9 @@ export interface Project {
   user_id: string;
   title: string;
   budget: number;
+  payment_status: PaymentProjectStatus;
+  amount_paid: number;
+  payment_due_date: string | null;
   created_at: string;
   updated_at: string;
   expenses?: Expense[];
@@ -38,4 +43,5 @@ export interface Project {
 export interface ProjectWithTotals extends Project {
   totalCost: number;
   expenseCount: number;
+  balanceDue: number;
 }

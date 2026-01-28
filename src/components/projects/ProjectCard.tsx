@@ -4,6 +4,7 @@ import { FolderOpen, Calendar, DollarSign, AlertTriangle, TrendingUp, MoreVertic
 import { ProjectWithTotals } from '@/types/expense';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
+import { PaymentStatusBadge } from './PaymentStatusBadge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +28,8 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
 
   return (
     <div className="stat-card group relative animate-fade-in">
-      <div className="absolute right-4 top-4">
+      <div className="absolute right-4 top-4 flex items-center gap-2">
+        <PaymentStatusBadge status={project.payment_status} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -59,7 +61,7 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
             <FolderOpen className="h-6 w-6 text-primary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-foreground truncate pr-8">
+            <h3 className="text-lg font-semibold text-foreground truncate pr-24">
               {project.title}
             </h3>
             <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
@@ -81,6 +83,22 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
             )}>
               ${project.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </span>
+          </div>
+
+          {/* Payment Info */}
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Paid:</span>
+              <span className="text-green-600 font-medium">
+                ${project.amount_paid.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Balance:</span>
+              <span className={cn("font-medium", project.balanceDue > 0 ? "text-red-600" : "text-foreground")}>
+                ${project.balanceDue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
           </div>
 
           {project.budget > 0 && (

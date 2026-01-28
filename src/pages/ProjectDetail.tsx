@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ArrowLeft, Calendar, DollarSign, Pencil, Trash2, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,17 +9,20 @@ import { Layout } from '@/components/layout/Layout';
 import { ExpenseTable } from '@/components/expenses/ExpenseTable';
 import { CategorySummary } from '@/components/expenses/CategorySummary';
 import { BudgetIndicator } from '@/components/expenses/BudgetIndicator';
+import { ProjectPaymentCard } from '@/components/projects/ProjectPaymentCard';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateProjectDialog } from '@/components/projects/CreateProjectDialog';
 import { DeleteConfirmDialog } from '@/components/projects/DeleteConfirmDialog';
 import { GenerateInvoiceDialog } from '@/components/invoice/GenerateInvoiceDialog';
+import { PaymentProjectStatus } from '@/types/expense';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { updateProject, deleteProject } = useProjects();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -35,7 +38,11 @@ export default function ProjectDetail() {
         .maybeSingle();
 
       if (error) throw error;
-      return data ? { ...data, budget: Number(data.budget) } : null;
+      return data ? { 
+        ...data, 
+        budget: Number(data.budget),
+        amount_paid: Number(data.amount_paid) || 0,
+      } : null;
     },
     enabled: !!id,
   });
@@ -54,6 +61,29 @@ export default function ProjectDetail() {
     if (!id) return;
     await updateProject.mutateAsync({ id, ...data });
     setIsEditOpen(false);
+  };
+
+  const handleRecordPayment = async (amount: number) => {
+    if (!id || !project) return;
+    const newAmountPaid = (project.amount_paid || 0) + amount;
+    
+    // Calculate payment status
+    let paymentStatus: PaymentProjectStatus = 'unpaid';
+    if (newAmountPaid >= totalCost) {
+      paymentStatus = 'paid';
+    } else if (newAmountPaid > 0) {
+      paymentStatus = 'partially_paid';
+    }
+    
+    await updateProject.mutateAsync({ 
+      id, 
+      amount_paid: newAmountPaid,
+      payment_status: paymentStatus,
+    });
+    
+    // Invalidate project query to refresh the data
+    queryClient.invalidateQueries({ queryKey: ['project', id] });
+    toast.success(`Payment of $${amount.toFixed(2)} recorded`);
   };
 
   const handleDeleteProject = async () => {
@@ -157,6 +187,7 @@ export default function ProjectDetail() {
                 projectTitle={project.title}
                 expenses={expenses}
                 totalCost={totalCost}
+                amountPaid={project.amount_paid || 0}
               />
               <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2">
                 <Download className="h-4 w-4" />
@@ -181,7 +212,7 @@ export default function ProjectDetail() {
 
         {/* Budget & Summary */}
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-1">
             <BudgetIndicator budget={project.budget} spent={totalCost} />
           </div>
           <div className="stat-card">
@@ -196,6 +227,13 @@ export default function ProjectDetail() {
               {expenses.length} expense{expenses.length !== 1 ? 's' : ''}
             </p>
           </div>
+          <ProjectPaymentCard
+            totalCost={totalCost}
+            amountPaid={project.amount_paid || 0}
+            paymentStatus={project.payment_status || 'unpaid'}
+            onRecordPayment={handleRecordPayment}
+            isUpdating={updateProject.isPending}
+          />
         </div>
 
         {/* Expense Table */}
@@ -219,7 +257,7 @@ export default function ProjectDetail() {
           onOpenChange={setIsEditOpen}
           onSubmit={handleUpdateProject}
           isLoading={updateProject.isPending}
-          editProject={{ ...project, totalCost, expenseCount: expenses.length }}
+          editProject={{ ...project, totalCost, expenseCount: expenses.length, balanceDue: totalCost - (project.amount_paid || 0) }}
         />
 
         <DeleteConfirmDialog
