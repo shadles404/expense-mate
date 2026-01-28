@@ -32,12 +32,17 @@ export function useProjects() {
             0
           );
 
+          const amountPaid = Number(project.amount_paid) || 0;
+          const balanceDue = totalCost - amountPaid;
+
           return {
             ...project,
             user_id: project.user_id || '',
             budget: Number(project.budget),
+            amount_paid: amountPaid,
             totalCost,
             expenseCount: expenses?.length || 0,
+            balanceDue,
           };
         })
       );
