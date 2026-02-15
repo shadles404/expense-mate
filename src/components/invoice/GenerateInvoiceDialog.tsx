@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -36,6 +37,7 @@ const invoiceFormSchema = z.object({
   invoice_date: z.string(),
   due_date: z.string().optional(),
   discount_amount: z.coerce.number().min(0).default(0),
+  partial_paid_amount: z.coerce.number().min(0).default(0),
   include_tax: z.boolean().default(true),
 });
 
@@ -68,12 +70,14 @@ export function GenerateInvoiceDialog({
       invoice_date: format(new Date(), 'yyyy-MM-dd'),
       due_date: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
       discount_amount: 0,
+      partial_paid_amount: amountPaid,
       include_tax: settings?.tax_enabled || false,
     },
   });
 
   const watchIncludeTax = form.watch('include_tax');
   const watchDiscount = form.watch('discount_amount');
+  const watchPartialPaid = form.watch('partial_paid_amount');
 
   const subtotal = totalCost;
   const taxAmount = watchIncludeTax && settings?.tax_enabled 
@@ -81,6 +85,8 @@ export function GenerateInvoiceDialog({
     : 0;
   const discountValue = Number(watchDiscount) || 0;
   const grandTotal = subtotal + taxAmount - discountValue;
+  const partialPaidValue = Number(watchPartialPaid) || 0;
+  const remainingBalance = Math.max(0, grandTotal - partialPaidValue);
 
   const expenseItems = expenses.map((exp, index) => ({
     no: index + 1,
@@ -118,6 +124,8 @@ export function GenerateInvoiceDialog({
         taxAmount,
         discountAmount: discountValue,
         total: grandTotal,
+        partialPaidAmount: partialPaidValue,
+        remainingBalance,
       });
 
       // Save invoice record to database
@@ -132,7 +140,7 @@ export function GenerateInvoiceDialog({
         tax_amount: taxAmount,
         discount_amount: discountValue,
         total: grandTotal,
-        status: 'generated',
+        status: remainingBalance <= 0 ? 'paid' : 'generated',
       });
 
       // Increment invoice number
@@ -157,7 +165,6 @@ export function GenerateInvoiceDialog({
           });
           toast.success('Invoice shared successfully');
         } else {
-          // Fallback: download the file
           pdf.save(`${invoiceNumber}_${projectTitle.replace(/\s+/g, '_')}.pdf`);
           toast.info('Sharing not supported, file downloaded instead');
         }
@@ -268,6 +275,20 @@ export function GenerateInvoiceDialog({
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="partial_paid_amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Partial Paid Amount ($)</FormLabel>
+                  <FormControl>
+                    <Input type="number" min={0} step={0.01} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {settings?.tax_enabled && (
               <FormField
                 control={form.control}
@@ -314,22 +335,24 @@ export function GenerateInvoiceDialog({
               <Separator />
               
               <div className="flex justify-between font-semibold">
-                <span>Grand Total</span>
+                <span>Total Amount</span>
                 <span>${grandTotal.toFixed(2)}</span>
               </div>
 
-              {amountPaid > 0 && (
-                <>
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>Amount Paid</span>
-                    <span>-${amountPaid.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold text-red-600">
-                    <span>Balance Due</span>
-                    <span>${Math.max(0, grandTotal - amountPaid).toFixed(2)}</span>
-                  </div>
-                </>
+              {partialPaidValue > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Partial Paid</span>
+                  <span>-${partialPaidValue.toFixed(2)}</span>
+                </div>
               )}
+
+              <div className={cn(
+                "flex justify-between font-semibold",
+                remainingBalance > 0 ? "text-destructive" : "text-green-600"
+              )}>
+                <span>Remaining Balance</span>
+                <span>${remainingBalance.toFixed(2)}</span>
+              </div>
             </div>
 
             {/* Action Buttons */}

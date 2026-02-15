@@ -15,6 +15,8 @@ interface GenerateInvoiceParams {
   taxAmount: number;
   discountAmount: number;
   total: number;
+  partialPaidAmount?: number;
+  remainingBalance?: number;
 }
 
 export function generateInvoicePdf(params: GenerateInvoiceParams): jsPDF {
@@ -30,7 +32,11 @@ export function generateInvoicePdf(params: GenerateInvoiceParams): jsPDF {
     taxAmount,
     discountAmount,
     total,
+    partialPaidAmount = 0,
+    remainingBalance,
   } = params;
+
+  const calculatedBalance = remainingBalance ?? Math.max(0, total - partialPaidAmount);
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -181,8 +187,34 @@ export function generateInvoicePdf(params: GenerateInvoiceParams): jsPDF {
   
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('Grand Total:', totalsX, totalsY + 4);
+  doc.text('Total Amount:', totalsX, totalsY + 4);
   doc.text(`$${total.toFixed(2)}`, pageWidth - 20, totalsY + 4, { align: 'right' });
+
+  // Partial Payment & Remaining Balance
+  if (partialPaidAmount > 0) {
+    totalsY += 12;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(22, 163, 74); // green
+    doc.text('Partial Paid:', totalsX, totalsY);
+    doc.text(`-$${partialPaidAmount.toFixed(2)}`, pageWidth - 20, totalsY, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+  }
+
+  totalsY += 10;
+  doc.setDrawColor(200, 200, 200);
+  doc.line(totalsX, totalsY - 3, pageWidth - 20, totalsY - 3);
+  
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  if (calculatedBalance > 0) {
+    doc.setTextColor(220, 38, 38); // red
+  } else {
+    doc.setTextColor(22, 163, 74); // green
+  }
+  doc.text('Remaining Balance:', totalsX, totalsY + 4);
+  doc.text(`$${calculatedBalance.toFixed(2)}`, pageWidth - 20, totalsY + 4, { align: 'right' });
+  doc.setTextColor(0, 0, 0);
 
   // Footer Section
   let footerY = totalsY + 30;
