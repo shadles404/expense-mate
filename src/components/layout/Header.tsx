@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FolderOpen, BarChart3, FileText, CalendarCheck, LogOut, User, Tags, Video, ChevronDown, Users, ClipboardList, Truck, CreditCard, Settings } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, BarChart3, FileText, CalendarCheck, LogOut, User, Tags, Video, ChevronDown, Users, ClipboardList, Truck, CreditCard, Settings, PackageCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,7 @@ const tiktokNavigation = [
   { name: 'Payment', href: '/tiktok/payment', icon: CreditCard },
   { name: 'Reports', href: '/tiktok/reports', icon: FileText },
   { name: 'Settings', href: '/tiktok/settings', icon: Settings },
+  { name: 'Delivery Records', href: '/tiktok/delivery-records', icon: PackageCheck },
 ];
 
 export function Header() {

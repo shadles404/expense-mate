@@ -20,6 +20,7 @@ import TikTokDelivery from "./pages/tiktok/TikTokDelivery";
 import TikTokPayment from "./pages/tiktok/TikTokPayment";
 import TikTokReports from "./pages/tiktok/TikTokReports";
 import TikTokSettings from "./pages/tiktok/TikTokSettings";
+import TikTokDeliveryRecords from "./pages/tiktok/TikTokDeliveryRecords";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/tiktok/payment" element={<ProtectedRoute><TikTokPayment /></ProtectedRoute>} />
           <Route path="/tiktok/reports" element={<ProtectedRoute><TikTokReports /></ProtectedRoute>} />
           <Route path="/tiktok/settings" element={<ProtectedRoute><TikTokSettings /></ProtectedRoute>} />
+          <Route path="/tiktok/delivery-records" element={<ProtectedRoute><TikTokDeliveryRecords /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
