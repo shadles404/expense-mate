@@ -3,6 +3,7 @@ export type PlatformType = 'TikTok' | 'Instagram' | 'YouTube' | 'Facebook' | 'Ot
 export type ContractType = 'Full-time' | 'Part-time' | 'Freelance' | 'Contract';
 export type DeliveryStatus = 'pending' | 'approved' | 'rejected';
 export type ProductDeliveryStatus = 'pending' | 'sent' | 'returned';
+export type DeliveryRecordStatus = 'pending' | 'completed' | 'cancelled';
 export type PaymentStatus = 'paid' | 'unpaid';
 export type AppRole = 'admin' | 'moderator' | 'user';
 
@@ -91,3 +92,19 @@ export const AD_TYPES: AdType[] = ['Milk', 'Makeup', 'Perfume', 'Cream', 'Skinca
 export const PLATFORM_TYPES: PlatformType[] = ['TikTok', 'Instagram', 'YouTube', 'Facebook', 'Other'];
 export const CONTRACT_TYPES: ContractType[] = ['Full-time', 'Part-time', 'Freelance', 'Contract'];
 export const PRODUCT_DELIVERY_STATUSES: ProductDeliveryStatus[] = ['pending', 'sent', 'returned'];
+export const DELIVERY_RECORD_STATUSES: DeliveryRecordStatus[] = ['pending', 'completed', 'cancelled'];
+
+export interface TikTokDeliveryRecord {
+  id: string;
+  user_id: string;
+  delivery_person_name: string;
+  phone: string | null;
+  advertiser_id: string;
+  status: DeliveryRecordStatus;
+  delivery_date: string;
+  delivery_time: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  advertiser?: TikTokAdvertiser;
+}

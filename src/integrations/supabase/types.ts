@@ -470,6 +470,56 @@ export type Database = {
           },
         ]
       }
+      tiktok_delivery_records: {
+        Row: {
+          advertiser_id: string
+          created_at: string
+          delivery_date: string
+          delivery_person_name: string
+          delivery_time: string
+          id: string
+          notes: string | null
+          phone: string | null
+          status: Database["public"]["Enums"]["delivery_record_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          advertiser_id: string
+          created_at?: string
+          delivery_date?: string
+          delivery_person_name: string
+          delivery_time?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["delivery_record_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          advertiser_id?: string
+          created_at?: string
+          delivery_date?: string
+          delivery_person_name?: string
+          delivery_time?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["delivery_record_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_delivery_records_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "tiktok_advertisers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tiktok_payments: {
         Row: {
           advertiser_id: string
@@ -650,6 +700,7 @@ export type Database = {
       ad_type: "Milk" | "Makeup" | "Perfume" | "Cream" | "Skincare" | "Other"
       app_role: "admin" | "moderator" | "user"
       contract_type: "Full-time" | "Part-time" | "Freelance" | "Contract"
+      delivery_record_status: "pending" | "completed" | "cancelled"
       delivery_status: "pending" | "approved" | "rejected"
       expense_category:
         | "Materials"
@@ -803,6 +854,7 @@ export const Constants = {
       ad_type: ["Milk", "Makeup", "Perfume", "Cream", "Skincare", "Other"],
       app_role: ["admin", "moderator", "user"],
       contract_type: ["Full-time", "Part-time", "Freelance", "Contract"],
+      delivery_record_status: ["pending", "completed", "cancelled"],
       delivery_status: ["pending", "approved", "rejected"],
       expense_category: [
         "Materials",
