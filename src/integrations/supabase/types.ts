@@ -576,8 +576,10 @@ export type Database = {
       tiktok_product_deliveries: {
         Row: {
           advertiser_id: string
+          company_name: string | null
           created_at: string
           date_sent: string
+          delivery_person: string | null
           id: string
           notes: string | null
           price: number
@@ -589,8 +591,10 @@ export type Database = {
         }
         Insert: {
           advertiser_id: string
+          company_name?: string | null
           created_at?: string
           date_sent?: string
+          delivery_person?: string | null
           id?: string
           notes?: string | null
           price?: number
@@ -602,8 +606,10 @@ export type Database = {
         }
         Update: {
           advertiser_id?: string
+          company_name?: string | null
           created_at?: string
           date_sent?: string
+          delivery_person?: string | null
           id?: string
           notes?: string | null
           price?: number

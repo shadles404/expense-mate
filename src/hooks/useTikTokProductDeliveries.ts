@@ -38,6 +38,8 @@ export function useTikTokProductDeliveries() {
       date_sent: string;
       status: ProductDeliveryStatus;
       price: number;
+      company_name?: string;
+      delivery_person?: string;
       notes?: string;
     }) => {
       if (!user?.id) throw new Error('Not authenticated');
@@ -71,6 +73,8 @@ export function useTikTokProductDeliveries() {
       date_sent?: string;
       status?: ProductDeliveryStatus;
       price?: number;
+      company_name?: string;
+      delivery_person?: string;
       notes?: string;
     }) => {
       const { data, error } = await supabase

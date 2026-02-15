@@ -19,17 +19,19 @@ import { useTikTokProductDeliveries } from '@/hooks/useTikTokProductDeliveries';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useUserRole } from '@/hooks/useUserRole';
 import { ProductDeliveryStatus, PRODUCT_DELIVERY_STATUSES } from '@/types/tiktok';
-import { Plus, Search, Pencil, Trash2, Loader2, CalendarIcon, DollarSign } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Loader2, CalendarIcon, DollarSign, Filter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const deliverySchema = z.object({
-  advertiser_id: z.string().min(1, 'Select a celebrity/influencer'),
+  advertiser_id: z.string().min(1, 'Select an influencer'),
+  company_name: z.string().min(1, 'Company name is required'),
   product_name: z.string().min(1, 'Product name is required'),
   quantity: z.number().min(1, 'Quantity must be at least 1'),
   date_sent: z.date({ required_error: 'Date is required' }),
+  delivery_person: z.string().min(1, 'Delivery person is required'),
   status: z.enum(['pending', 'sent', 'returned'] as const),
   price: z.number().min(0, 'Price must be 0 or more'),
   notes: z.string().optional(),
@@ -46,13 +48,22 @@ export default function TikTokDelivery() {
   const [editDelivery, setEditDelivery] = useState<typeof deliveries[0] | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Filters
+  const [filterInfluencer, setFilterInfluencer] = useState<string>('all');
+  const [filterCompany, setFilterCompany] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
+
   const form = useForm<DeliveryFormData>({
     resolver: zodResolver(deliverySchema),
     defaultValues: {
       advertiser_id: '',
+      company_name: '',
       product_name: '',
       quantity: 1,
       date_sent: new Date(),
+      delivery_person: '',
       status: 'pending',
       price: 0,
       notes: '',
@@ -63,30 +74,50 @@ export default function TikTokDelivery() {
     resolver: zodResolver(deliverySchema),
   });
 
+  // Unique values for filters
+  const uniqueCompanies = useMemo(() => {
+    const companies = new Set(deliveries.map(d => d.company_name).filter(Boolean));
+    return Array.from(companies) as string[];
+  }, [deliveries]);
+
   const filteredDeliveries = useMemo(() => {
-    if (!searchQuery.trim()) return deliveries;
-    const query = searchQuery.toLowerCase();
-    return deliveries.filter(d => 
-      d.advertiser?.name.toLowerCase().includes(query) ||
-      d.product_name.toLowerCase().includes(query)
-    );
-  }, [deliveries, searchQuery]);
+    return deliveries.filter(d => {
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch = 
+          d.advertiser?.name.toLowerCase().includes(query) ||
+          d.product_name.toLowerCase().includes(query) ||
+          d.company_name?.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
+      if (filterInfluencer !== 'all' && d.advertiser_id !== filterInfluencer) return false;
+      if (filterCompany !== 'all' && d.company_name !== filterCompany) return false;
+      if (filterStatus !== 'all' && d.status !== filterStatus) return false;
+      if (filterDateFrom && d.date_sent < filterDateFrom) return false;
+      if (filterDateTo && d.date_sent > filterDateTo) return false;
+      return true;
+    });
+  }, [deliveries, searchQuery, filterInfluencer, filterCompany, filterStatus, filterDateFrom, filterDateTo]);
 
   const onSubmit = async (data: DeliveryFormData) => {
     await createDelivery.mutateAsync({
       advertiser_id: data.advertiser_id,
+      company_name: data.company_name,
       product_name: data.product_name,
       quantity: data.quantity,
       date_sent: format(data.date_sent, 'yyyy-MM-dd'),
+      delivery_person: data.delivery_person,
       status: data.status,
       price: data.price,
       notes: data.notes,
     });
     form.reset({
       advertiser_id: '',
+      company_name: '',
       product_name: '',
       quantity: 1,
       date_sent: new Date(),
+      delivery_person: '',
       status: 'pending',
       price: 0,
       notes: '',
@@ -98,9 +129,11 @@ export default function TikTokDelivery() {
     setEditDelivery(delivery);
     editForm.reset({
       advertiser_id: delivery.advertiser_id,
+      company_name: delivery.company_name || '',
       product_name: delivery.product_name,
       quantity: delivery.quantity,
       date_sent: new Date(delivery.date_sent),
+      delivery_person: delivery.delivery_person || '',
       status: delivery.status,
       price: delivery.price,
       notes: delivery.notes || '',
@@ -112,9 +145,11 @@ export default function TikTokDelivery() {
     await updateDelivery.mutateAsync({
       id: editDelivery.id,
       advertiser_id: data.advertiser_id,
+      company_name: data.company_name,
       product_name: data.product_name,
       quantity: data.quantity,
       date_sent: format(data.date_sent, 'yyyy-MM-dd'),
+      delivery_person: data.delivery_person,
       status: data.status,
       price: data.price,
       notes: data.notes,
@@ -140,6 +175,15 @@ export default function TikTokDelivery() {
     }
   };
 
+  const clearFilters = () => {
+    setFilterInfluencer('all');
+    setFilterCompany('all');
+    setFilterStatus('all');
+    setFilterDateFrom('');
+    setFilterDateTo('');
+    setSearchQuery('');
+  };
+
   const DeliveryFormFields = ({ formInstance, onSubmitFn, isSubmitting, submitLabel }: { 
     formInstance: typeof form; 
     onSubmitFn: (data: DeliveryFormData) => Promise<void>;
@@ -151,14 +195,28 @@ export default function TikTokDelivery() {
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             control={formInstance.control}
+            name="company_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Company Name *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter company name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={formInstance.control}
             name="advertiser_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Celebrity / Influencer *</FormLabel>
+                <FormLabel>Influencer *</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select celebrity" />
+                      <SelectValue placeholder="Select influencer" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -210,7 +268,7 @@ export default function TikTokDelivery() {
             name="date_sent"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>Date Sent *</FormLabel>
+                <FormLabel>Delivery Date *</FormLabel>
                 <Popover>
                   <PopoverTrigger asChild>
                     <FormControl>
@@ -236,6 +294,20 @@ export default function TikTokDelivery() {
                     />
                   </PopoverContent>
                 </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={formInstance.control}
+            name="delivery_person"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Delivery Person *</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter delivery person name" {...field} />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -313,14 +385,14 @@ export default function TikTokDelivery() {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Delivery</h1>
-          <p className="mt-1 text-muted-foreground">Track product deliveries to celebrities and influencers</p>
+          <h1 className="text-3xl font-bold text-foreground">Delivery Management</h1>
+          <p className="mt-1 text-muted-foreground">Track product deliveries from companies to influencers</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="records">Delivery Records</TabsTrigger>
-            {isAdmin && <TabsTrigger value="add">Add New Delivery</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="add">Delivery Registration</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="records" className="space-y-4">
@@ -341,16 +413,66 @@ export default function TikTokDelivery() {
               </CardContent>
             </Card>
 
-            {/* Search */}
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by celebrity name or product..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+            {/* Search & Filters */}
+            <Card>
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium text-foreground">Filters</span>
+                  <Button variant="ghost" size="sm" onClick={clearFilters} className="ml-auto text-xs">
+                    Clear All
+                  </Button>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={filterInfluencer} onValueChange={setFilterInfluencer}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Influencer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Influencers</SelectItem>
+                      {advertisers.map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterCompany} onValueChange={setFilterCompany}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Companies</SelectItem>
+                      {uniqueCompanies.map(c => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      {PRODUCT_DELIVERY_STATUSES.map(s => (
+                        <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex gap-2">
+                    <Input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} placeholder="From" className="text-xs" />
+                    <Input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} placeholder="To" className="text-xs" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Records Table */}
             <Card>
@@ -364,17 +486,21 @@ export default function TikTokDelivery() {
                   </div>
                 ) : filteredDeliveries.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
-                    {searchQuery ? 'No matching deliveries found.' : 'No deliveries yet. Add your first delivery!'}
+                    {searchQuery || filterInfluencer !== 'all' || filterCompany !== 'all' || filterStatus !== 'all'
+                      ? 'No matching deliveries found.' 
+                      : 'No deliveries yet. Register your first delivery!'}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Celebrity Name</TableHead>
-                          <TableHead>Product Name</TableHead>
-                          <TableHead>Quantity</TableHead>
-                          <TableHead>Date Sent</TableHead>
+                          <TableHead>Influencer</TableHead>
+                          <TableHead>Company</TableHead>
+                          <TableHead>Product</TableHead>
+                          <TableHead>Qty</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Delivery Person</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Price</TableHead>
                           <TableHead>Notes</TableHead>
@@ -387,11 +513,13 @@ export default function TikTokDelivery() {
                             <TableCell className="font-medium">
                               {delivery.advertiser?.name || 'Unknown'}
                             </TableCell>
+                            <TableCell>{delivery.company_name || '-'}</TableCell>
                             <TableCell>{delivery.product_name}</TableCell>
                             <TableCell>{delivery.quantity}</TableCell>
                             <TableCell>
                               {format(new Date(delivery.date_sent), 'MMM d, yyyy')}
                             </TableCell>
+                            <TableCell>{delivery.delivery_person || '-'}</TableCell>
                             <TableCell>{getStatusBadge(delivery.status)}</TableCell>
                             <TableCell>${Number(delivery.price).toLocaleString('en-US', { minimumFractionDigits: 2 })}</TableCell>
                             <TableCell className="max-w-[150px] truncate">{delivery.notes || '-'}</TableCell>
@@ -433,7 +561,7 @@ export default function TikTokDelivery() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Plus className="h-5 w-5" />
-                    Add New Delivery
+                    Delivery Registration
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -441,7 +569,7 @@ export default function TikTokDelivery() {
                     formInstance={form}
                     onSubmitFn={onSubmit}
                     isSubmitting={createDelivery.isPending}
-                    submitLabel="Add Delivery"
+                    submitLabel="Register Delivery"
                   />
                 </CardContent>
               </Card>

@@ -48,6 +48,8 @@ export interface TikTokProductDelivery {
   date_sent: string;
   status: ProductDeliveryStatus;
   price: number;
+  company_name: string | null;
+  delivery_person: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
