@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FolderOpen, BarChart3, FileText, CalendarCheck, LogOut, User, Tags } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, BarChart3, FileText, CalendarCheck, LogOut, User, Tags, Video, ChevronDown, Users, Target, Package, DollarSign, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -29,10 +29,21 @@ const navigation = [
   { name: 'Reports', href: '/reports', icon: FileText },
 ];
 
+const tiktokNav = [
+  { name: 'Dashboard', href: '/tiktok', icon: LayoutDashboard },
+  { name: 'Influencers', href: '/tiktok/influencers', icon: Users },
+  { name: 'Tracking', href: '/tiktok/tracking', icon: Target },
+  { name: 'Delivery', href: '/tiktok/delivery', icon: Package },
+  { name: 'Payments', href: '/tiktok/payments', icon: DollarSign },
+  { name: 'Reports', href: '/tiktok/reports', icon: BarChart3 },
+  { name: 'Settings', href: '/tiktok/settings', icon: Settings },
+];
+
 export function Header() {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const isTikTokActive = location.pathname.startsWith('/tiktok');
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-xl">
@@ -65,10 +76,37 @@ export function Header() {
                   </Link>
                 );
               })}
+
+              {/* TikTok Module Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={cn(
+                      'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
+                      isTikTokActive
+                        ? 'bg-primary text-primary-foreground shadow-md'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    <Video className="h-4 w-4" />
+                    TikTok
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  {tiktokNav.map((item) => (
+                    <DropdownMenuItem key={item.href} asChild>
+                      <Link to={item.href} className="flex items-center gap-2">
+                        <item.icon className="h-4 w-4" />
+                        {item.name}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </nav>
           </div>
 
-          {/* User Menu */}
           {user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -134,6 +172,32 @@ export function Header() {
             </Link>
           );
         })}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn(
+                'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 whitespace-nowrap',
+                isTikTokActive
+                  ? 'bg-primary text-primary-foreground shadow-md'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Video className="h-4 w-4" />
+              TikTok
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {tiktokNav.map((item) => (
+              <DropdownMenuItem key={item.href} asChild>
+                <Link to={item.href} className="flex items-center gap-2">
+                  <item.icon className="h-4 w-4" />
+                  {item.name}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </nav>
     </header>
   );

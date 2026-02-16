@@ -372,10 +372,14 @@ export type Database = {
       tiktok_advertisers: {
         Row: {
           ad_types: Database["public"]["Enums"]["ad_type"][]
+          agreement_end_date: string | null
+          agreement_start_date: string | null
+          category: string | null
           completed_videos: number
           contract_type: Database["public"]["Enums"]["contract_type"]
           created_at: string
           id: string
+          is_active: boolean
           name: string
           notes: string | null
           phone: string | null
@@ -383,15 +387,20 @@ export type Database = {
           salary: number
           target_videos: number
           targets_locked: boolean
+          tiktok_username: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           ad_types?: Database["public"]["Enums"]["ad_type"][]
+          agreement_end_date?: string | null
+          agreement_start_date?: string | null
+          category?: string | null
           completed_videos?: number
           contract_type?: Database["public"]["Enums"]["contract_type"]
           created_at?: string
           id?: string
+          is_active?: boolean
           name: string
           notes?: string | null
           phone?: string | null
@@ -399,15 +408,20 @@ export type Database = {
           salary?: number
           target_videos?: number
           targets_locked?: boolean
+          tiktok_username?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           ad_types?: Database["public"]["Enums"]["ad_type"][]
+          agreement_end_date?: string | null
+          agreement_start_date?: string | null
+          category?: string | null
           completed_videos?: number
           contract_type?: Database["public"]["Enums"]["contract_type"]
           created_at?: string
           id?: string
+          is_active?: boolean
           name?: string
           notes?: string | null
           phone?: string | null
@@ -415,6 +429,7 @@ export type Database = {
           salary?: number
           target_videos?: number
           targets_locked?: boolean
+          tiktok_username?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -526,12 +541,15 @@ export type Database = {
           amount: number
           approved_at: string | null
           approved_by: string | null
+          campaign_month: string | null
+          completed_videos: number | null
           created_at: string
           id: string
           notes: string | null
           payment_date: string | null
           receipt_url: string | null
           status: Database["public"]["Enums"]["payment_status"]
+          total_target_videos: number | null
           updated_at: string
           user_id: string
         }
@@ -540,12 +558,15 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
+          campaign_month?: string | null
+          completed_videos?: number | null
           created_at?: string
           id?: string
           notes?: string | null
           payment_date?: string | null
           receipt_url?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
+          total_target_videos?: number | null
           updated_at?: string
           user_id: string
         }
@@ -554,12 +575,15 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
+          campaign_month?: string | null
+          completed_videos?: number | null
           created_at?: string
           id?: string
           notes?: string | null
           payment_date?: string | null
           receipt_url?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
+          total_target_videos?: number | null
           updated_at?: string
           user_id?: string
         }
