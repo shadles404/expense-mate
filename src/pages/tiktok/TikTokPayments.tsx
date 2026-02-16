@@ -1,0 +1,163 @@
+import { useState } from 'react';
+import { Layout } from '@/components/layout/Layout';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { useTikTokPayments } from '@/hooks/useTikTokPayments';
+import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
+import { Plus, CheckCircle, Search } from 'lucide-react';
+import { format } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
+
+export default function TikTokPayments() {
+  const { payments, isLoading, createPayment, updatePayment } = useTikTokPayments();
+  const { influencers } = useTikTokAdvertisers();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [form, setForm] = useState({
+    advertiser_id: '', amount: 0, campaign_month: '', total_target_videos: 0, completed_videos: 0, notes: '',
+  });
+
+  const selectedInfluencer = influencers.find((i) => i.id === form.advertiser_id);
+
+  const handleInfluencerSelect = (id: string) => {
+    const inf = influencers.find((i) => i.id === id);
+    setForm({
+      ...form,
+      advertiser_id: id,
+      total_target_videos: inf?.target_videos || 0,
+      completed_videos: inf?.completed_videos || 0,
+      amount: inf?.salary || 0,
+    });
+  };
+
+  const handleSubmit = () => {
+    if (form.completed_videos < form.total_target_videos) {
+      toast({ title: 'Cannot confirm payment', description: 'Influencer has not completed all target videos.', variant: 'destructive' });
+      return;
+    }
+    createPayment.mutate({
+      advertiser_id: form.advertiser_id,
+      amount: form.amount,
+      campaign_month: form.campaign_month || null,
+      total_target_videos: form.total_target_videos,
+      completed_videos: form.completed_videos,
+      notes: form.notes || null,
+      status: 'unpaid',
+    });
+    setDialogOpen(false);
+    setForm({ advertiser_id: '', amount: 0, campaign_month: '', total_target_videos: 0, completed_videos: 0, notes: '' });
+  };
+
+  const confirmPayment = (id: string) => {
+    updatePayment.mutate({ id, status: 'paid', payment_date: new Date().toISOString().split('T')[0] });
+  };
+
+  const filtered = payments.filter((p) =>
+    (p.advertiser?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (p.campaign_month || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <Layout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">Payment Confirmation</h1>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-2" />New Payment</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Create Payment</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Influencer *</Label>
+                  <Select value={form.advertiser_id} onValueChange={handleInfluencerSelect}>
+                    <SelectTrigger><SelectValue placeholder="Select influencer" /></SelectTrigger>
+                    <SelectContent>
+                      {influencers.filter((i) => i.is_active).map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Campaign Month</Label><Input type="month" value={form.campaign_month} onChange={(e) => setForm({ ...form, campaign_month: e.target.value })} /></div>
+                {selectedInfluencer && (
+                  <div className="rounded-lg bg-muted p-4 space-y-2">
+                    <div className="flex justify-between text-sm"><span>Target Videos:</span><span className="font-medium">{form.total_target_videos}</span></div>
+                    <div className="flex justify-between text-sm"><span>Completed:</span><span className="font-medium">{form.completed_videos}</span></div>
+                    <div className="flex justify-between text-sm">
+                      <span>Status:</span>
+                      <Badge variant={form.completed_videos >= form.total_target_videos ? 'default' : 'destructive'}>
+                        {form.completed_videos >= form.total_target_videos ? 'Target Reached' : 'Incomplete'}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+                <div><Label>Amount</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} /></div>
+                <div><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+                <Button onClick={handleSubmit} disabled={!form.advertiser_id || form.completed_videos < form.total_target_videos} className="w-full">
+                  Create Payment
+                </Button>
+                {form.advertiser_id && form.completed_videos < form.total_target_videos && (
+                  <p className="text-xs text-destructive text-center">Payment can only be created when targets are completed</p>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Influencer</TableHead>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead>Target</TableHead>
+                  <TableHead>Completed</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.advertiser?.name || '—'}</TableCell>
+                    <TableCell>{p.campaign_month || '—'}</TableCell>
+                    <TableCell>{p.total_target_videos}</TableCell>
+                    <TableCell>{p.completed_videos}</TableCell>
+                    <TableCell>${p.amount.toFixed(2)}</TableCell>
+                    <TableCell><Badge variant={p.status === 'paid' ? 'default' : 'secondary'}>{p.status}</Badge></TableCell>
+                    <TableCell>{p.payment_date ? format(new Date(p.payment_date), 'MMM dd, yyyy') : '—'}</TableCell>
+                    <TableCell className="text-right">
+                      {p.status === 'unpaid' && (
+                        <Button size="sm" variant="outline" onClick={() => confirmPayment(p.id)}>
+                          <CheckCircle className="h-4 w-4 mr-1" />Confirm
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No payments found'}</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
+  );
+}

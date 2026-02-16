@@ -1,0 +1,195 @@
+import { useState } from 'react';
+import { Layout } from '@/components/layout/Layout';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { useTikTokProductDeliveries } from '@/hooks/useTikTokProductDeliveries';
+import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
+import { Plus, Search, Pencil } from 'lucide-react';
+import { format } from 'date-fns';
+import type { TikTokProductDelivery } from '@/types/tiktok';
+
+const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive'> = {
+  pending: 'secondary', sent: 'default', returned: 'destructive',
+};
+
+export default function TikTokDelivery() {
+  const { productDeliveries, isLoading, createProductDelivery, updateProductDelivery } = useTikTokProductDeliveries();
+  const { influencers } = useTikTokAdvertisers();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<TikTokProductDelivery | null>(null);
+  const [search, setSearch] = useState('');
+  const [filterInfluencer, setFilterInfluencer] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
+
+  const [form, setForm] = useState({
+    advertiser_id: '', product_name: '', quantity: 1, date_sent: new Date().toISOString().split('T')[0],
+    status: 'pending' as 'pending' | 'sent' | 'returned', price: 0, company_name: '', delivery_person: '', notes: '',
+  });
+
+  const resetForm = () => {
+    setForm({ advertiser_id: '', product_name: '', quantity: 1, date_sent: new Date().toISOString().split('T')[0], status: 'pending', price: 0, company_name: '', delivery_person: '', notes: '' });
+    setEditing(null);
+  };
+
+  const openEdit = (d: TikTokProductDelivery) => {
+    setEditing(d);
+    setForm({
+      advertiser_id: d.advertiser_id, product_name: d.product_name, quantity: d.quantity,
+      date_sent: d.date_sent, status: d.status, price: d.price,
+      company_name: d.company_name || '', delivery_person: d.delivery_person || '', notes: d.notes || '',
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSubmit = () => {
+    const payload = {
+      advertiser_id: form.advertiser_id, product_name: form.product_name, quantity: form.quantity,
+      date_sent: form.date_sent, status: form.status, price: form.price,
+      company_name: form.company_name || null, delivery_person: form.delivery_person || null, notes: form.notes || null,
+    };
+    if (editing) {
+      updateProductDelivery.mutate({ id: editing.id, ...payload });
+    } else {
+      createProductDelivery.mutate(payload);
+    }
+    setDialogOpen(false);
+    resetForm();
+  };
+
+  const filtered = productDeliveries.filter((d) => {
+    const matchSearch = d.product_name.toLowerCase().includes(search.toLowerCase()) ||
+      (d.advertiser?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (d.company_name || '').toLowerCase().includes(search.toLowerCase());
+    const matchInfluencer = filterInfluencer === 'all' || d.advertiser_id === filterInfluencer;
+    const matchStatus = filterStatus === 'all' || d.status === filterStatus;
+    const matchDateFrom = !filterDateFrom || d.date_sent >= filterDateFrom;
+    const matchDateTo = !filterDateTo || d.date_sent <= filterDateTo;
+    return matchSearch && matchInfluencer && matchStatus && matchDateFrom && matchDateTo;
+  });
+
+  return (
+    <Layout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">Delivery Records</h1>
+          <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-2" />New Delivery</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+              <DialogHeader><DialogTitle>{editing ? 'Edit Delivery' : 'Register Delivery'}</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Influencer *</Label>
+                  <Select value={form.advertiser_id} onValueChange={(v) => setForm({ ...form, advertiser_id: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select influencer" /></SelectTrigger>
+                    <SelectContent>
+                      {influencers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Product Name *</Label><Input value={form.product_name} onChange={(e) => setForm({ ...form, product_name: e.target.value })} /></div>
+                  <div><Label>Quantity</Label><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Date Sent</Label><Input type="date" value={form.date_sent} onChange={(e) => setForm({ ...form, date_sent: e.target.value })} /></div>
+                  <div><Label>Price</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Company Name</Label><Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} /></div>
+                  <div><Label>Delivery Person</Label><Input value={form.delivery_person} onChange={(e) => setForm({ ...form, delivery_person: e.target.value })} /></div>
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <Select value={form.status} onValueChange={(v: any) => setForm({ ...form, status: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="sent">Delivered</SelectItem>
+                      <SelectItem value="returned">Returned</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+                <Button onClick={handleSubmit} disabled={!form.advertiser_id || !form.product_name} className="w-full">{editing ? 'Update' : 'Register'}</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Select value={filterInfluencer} onValueChange={setFilterInfluencer}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Influencer" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Influencers</SelectItem>
+              {influencers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="sent">Delivered</SelectItem>
+              <SelectItem value="returned">Returned</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="w-[150px]" placeholder="From" />
+          <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="w-[150px]" placeholder="To" />
+        </div>
+
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Influencer</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Qty</TableHead>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((d) => (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-medium">{d.advertiser?.name || '—'}</TableCell>
+                    <TableCell>{d.product_name}</TableCell>
+                    <TableCell>{d.quantity}</TableCell>
+                    <TableCell>{d.company_name || '—'}</TableCell>
+                    <TableCell>{format(new Date(d.date_sent), 'MMM dd, yyyy')}</TableCell>
+                    <TableCell>${d.price.toFixed(2)}</TableCell>
+                    <TableCell><Badge variant={STATUS_COLORS[d.status]}>{d.status}</Badge></TableCell>
+                    <TableCell className="text-right">
+                      <Button size="icon" variant="ghost" onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No deliveries found'}</TableCell></TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
+  );
+}

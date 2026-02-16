@@ -12,6 +12,13 @@ import Reports from "./pages/Reports";
 import Schedule from "./pages/Schedule";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import TikTokDashboard from "./pages/tiktok/TikTokDashboard";
+import TikTokInfluencers from "./pages/tiktok/TikTokInfluencers";
+import TikTokTracking from "./pages/tiktok/TikTokTracking";
+import TikTokDelivery from "./pages/tiktok/TikTokDelivery";
+import TikTokPayments from "./pages/tiktok/TikTokPayments";
+import TikTokReports from "./pages/tiktok/TikTokReports";
+import TikTokSettingsPage from "./pages/tiktok/TikTokSettings";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +36,13 @@ const App = () => (
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
           <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
+          <Route path="/tiktok" element={<ProtectedRoute><TikTokDashboard /></ProtectedRoute>} />
+          <Route path="/tiktok/influencers" element={<ProtectedRoute><TikTokInfluencers /></ProtectedRoute>} />
+          <Route path="/tiktok/tracking" element={<ProtectedRoute><TikTokTracking /></ProtectedRoute>} />
+          <Route path="/tiktok/delivery" element={<ProtectedRoute><TikTokDelivery /></ProtectedRoute>} />
+          <Route path="/tiktok/payments" element={<ProtectedRoute><TikTokPayments /></ProtectedRoute>} />
+          <Route path="/tiktok/reports" element={<ProtectedRoute><TikTokReports /></ProtectedRoute>} />
+          <Route path="/tiktok/settings" element={<ProtectedRoute><TikTokSettingsPage /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
