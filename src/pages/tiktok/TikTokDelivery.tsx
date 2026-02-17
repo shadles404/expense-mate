@@ -11,8 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useTikTokProductDeliveries } from '@/hooks/useTikTokProductDeliveries';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
-import { Plus, Search, Pencil } from 'lucide-react';
+import { Plus, Search, Pencil, Download } from 'lucide-react';
 import { format } from 'date-fns';
+import { downloadCSV } from '@/lib/csvExport';
 import type { TikTokProductDelivery } from '@/types/tiktok';
 
 const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive'> = {
@@ -32,11 +33,11 @@ export default function TikTokDelivery() {
 
   const [form, setForm] = useState({
     advertiser_id: '', product_name: '', quantity: 1, date_sent: new Date().toISOString().split('T')[0],
-    status: 'pending' as 'pending' | 'sent' | 'returned', price: 0, company_name: '', delivery_person: '', notes: '',
+    status: 'pending' as 'pending' | 'sent' | 'returned', price: 0, notes: '',
   });
 
   const resetForm = () => {
-    setForm({ advertiser_id: '', product_name: '', quantity: 1, date_sent: new Date().toISOString().split('T')[0], status: 'pending', price: 0, company_name: '', delivery_person: '', notes: '' });
+    setForm({ advertiser_id: '', product_name: '', quantity: 1, date_sent: new Date().toISOString().split('T')[0], status: 'pending', price: 0, notes: '' });
     setEditing(null);
   };
 
@@ -44,8 +45,7 @@ export default function TikTokDelivery() {
     setEditing(d);
     setForm({
       advertiser_id: d.advertiser_id, product_name: d.product_name, quantity: d.quantity,
-      date_sent: d.date_sent, status: d.status, price: d.price,
-      company_name: d.company_name || '', delivery_person: d.delivery_person || '', notes: d.notes || '',
+      date_sent: d.date_sent, status: d.status, price: d.price, notes: d.notes || '',
     });
     setDialogOpen(true);
   };
@@ -53,8 +53,7 @@ export default function TikTokDelivery() {
   const handleSubmit = () => {
     const payload = {
       advertiser_id: form.advertiser_id, product_name: form.product_name, quantity: form.quantity,
-      date_sent: form.date_sent, status: form.status, price: form.price,
-      company_name: form.company_name || null, delivery_person: form.delivery_person || null, notes: form.notes || null,
+      date_sent: form.date_sent, status: form.status, price: form.price, notes: form.notes || null,
     };
     if (editing) {
       updateProductDelivery.mutate({ id: editing.id, ...payload });
@@ -67,8 +66,7 @@ export default function TikTokDelivery() {
 
   const filtered = productDeliveries.filter((d) => {
     const matchSearch = d.product_name.toLowerCase().includes(search.toLowerCase()) ||
-      (d.advertiser?.name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (d.company_name || '').toLowerCase().includes(search.toLowerCase());
+      (d.advertiser?.name || '').toLowerCase().includes(search.toLowerCase());
     const matchInfluencer = filterInfluencer === 'all' || d.advertiser_id === filterInfluencer;
     const matchStatus = filterStatus === 'all' || d.status === filterStatus;
     const matchDateFrom = !filterDateFrom || d.date_sent >= filterDateFrom;
@@ -76,55 +74,68 @@ export default function TikTokDelivery() {
     return matchSearch && matchInfluencer && matchStatus && matchDateFrom && matchDateTo;
   });
 
+  const handleExportCSV = () => {
+    downloadCSV(filtered.map((d) => ({
+      Influencer: d.advertiser?.name || '',
+      Product: d.product_name,
+      Quantity: d.quantity,
+      Date: d.date_sent,
+      Price: d.price,
+      Status: d.status,
+      Notes: d.notes || '',
+    })), 'delivery-records');
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-foreground">Delivery Records</h1>
-          <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />New Delivery</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>{editing ? 'Edit Delivery' : 'Register Delivery'}</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Influencer *</Label>
-                  <Select value={form.advertiser_id} onValueChange={(v) => setForm({ ...form, advertiser_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select influencer" /></SelectTrigger>
-                    <SelectContent>
-                      {influencers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportCSV} disabled={filtered.length === 0}>
+              <Download className="h-4 w-4 mr-2" />CSV
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" />New Delivery</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                <DialogHeader><DialogTitle>{editing ? 'Edit Delivery' : 'Register Delivery'}</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Influencer *</Label>
+                    <Select value={form.advertiser_id} onValueChange={(v) => setForm({ ...form, advertiser_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select influencer" /></SelectTrigger>
+                      <SelectContent>
+                        {influencers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><Label>Product Name *</Label><Input value={form.product_name} onChange={(e) => setForm({ ...form, product_name: e.target.value })} /></div>
+                    <div><Label>Quantity</Label><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} /></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div><Label>Date Sent</Label><Input type="date" value={form.date_sent} onChange={(e) => setForm({ ...form, date_sent: e.target.value })} /></div>
+                    <div><Label>Price</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} /></div>
+                  </div>
+                  <div>
+                    <Label>Status</Label>
+                    <Select value={form.status} onValueChange={(v: any) => setForm({ ...form, status: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="sent">Delivered</SelectItem>
+                        <SelectItem value="returned">Returned</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+                  <Button onClick={handleSubmit} disabled={!form.advertiser_id || !form.product_name} className="w-full">{editing ? 'Update' : 'Register'}</Button>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Product Name *</Label><Input value={form.product_name} onChange={(e) => setForm({ ...form, product_name: e.target.value })} /></div>
-                  <div><Label>Quantity</Label><Input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Date Sent</Label><Input type="date" value={form.date_sent} onChange={(e) => setForm({ ...form, date_sent: e.target.value })} /></div>
-                  <div><Label>Price</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><Label>Company Name</Label><Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} /></div>
-                  <div><Label>Delivery Person</Label><Input value={form.delivery_person} onChange={(e) => setForm({ ...form, delivery_person: e.target.value })} /></div>
-                </div>
-                <div>
-                  <Label>Status</Label>
-                  <Select value={form.status} onValueChange={(v: any) => setForm({ ...form, status: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="sent">Delivered</SelectItem>
-                      <SelectItem value="returned">Returned</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-                <Button onClick={handleSubmit} disabled={!form.advertiser_id || !form.product_name} className="w-full">{editing ? 'Update' : 'Register'}</Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -160,7 +171,6 @@ export default function TikTokDelivery() {
                   <TableHead>Influencer</TableHead>
                   <TableHead>Product</TableHead>
                   <TableHead>Qty</TableHead>
-                  <TableHead>Company</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Status</TableHead>
@@ -173,7 +183,6 @@ export default function TikTokDelivery() {
                     <TableCell className="font-medium">{d.advertiser?.name || '—'}</TableCell>
                     <TableCell>{d.product_name}</TableCell>
                     <TableCell>{d.quantity}</TableCell>
-                    <TableCell>{d.company_name || '—'}</TableCell>
                     <TableCell>{format(new Date(d.date_sent), 'MMM dd, yyyy')}</TableCell>
                     <TableCell>${d.price.toFixed(2)}</TableCell>
                     <TableCell><Badge variant={STATUS_COLORS[d.status]}>{d.status}</Badge></TableCell>
@@ -183,7 +192,7 @@ export default function TikTokDelivery() {
                   </TableRow>
                 ))}
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No deliveries found'}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No deliveries found'}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

@@ -535,6 +535,57 @@ export type Database = {
           },
         ]
       }
+      tiktok_monthly_reports: {
+        Row: {
+          active_influencers: number
+          created_at: string
+          id: string
+          reached_target: number
+          report_data: Json | null
+          report_month: string
+          total_completed_videos: number
+          total_deliveries: number
+          total_influencers: number
+          total_payments_made: number
+          total_payments_pending: number
+          total_target_videos: number
+          unreached_target: number
+          user_id: string
+        }
+        Insert: {
+          active_influencers?: number
+          created_at?: string
+          id?: string
+          reached_target?: number
+          report_data?: Json | null
+          report_month: string
+          total_completed_videos?: number
+          total_deliveries?: number
+          total_influencers?: number
+          total_payments_made?: number
+          total_payments_pending?: number
+          total_target_videos?: number
+          unreached_target?: number
+          user_id: string
+        }
+        Update: {
+          active_influencers?: number
+          created_at?: string
+          id?: string
+          reached_target?: number
+          report_data?: Json | null
+          report_month?: string
+          total_completed_videos?: number
+          total_deliveries?: number
+          total_influencers?: number
+          total_payments_made?: number
+          total_payments_pending?: number
+          total_target_videos?: number
+          unreached_target?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       tiktok_payments: {
         Row: {
           advertiser_id: string

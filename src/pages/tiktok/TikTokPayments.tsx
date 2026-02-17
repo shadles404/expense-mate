@@ -11,13 +11,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useTikTokPayments } from '@/hooks/useTikTokPayments';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
-import { Plus, CheckCircle, Search } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Plus, CheckCircle, Search, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
+import { downloadCSV } from '@/lib/csvExport';
 
 export default function TikTokPayments() {
   const { payments, isLoading, createPayment, updatePayment } = useTikTokPayments();
   const { influencers } = useTikTokAdvertisers();
+  const { isAdmin } = useUserRole();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
@@ -49,7 +52,9 @@ export default function TikTokPayments() {
       total_target_videos: form.total_target_videos,
       completed_videos: form.completed_videos,
       notes: form.notes || null,
-      status: 'unpaid',
+      // Auto-confirm when targets are completed
+      status: 'paid',
+      payment_date: new Date().toISOString().split('T')[0],
     });
     setDialogOpen(false);
     setForm({ advertiser_id: '', amount: 0, campaign_month: '', total_target_videos: 0, completed_videos: 0, notes: '' });
@@ -64,51 +69,68 @@ export default function TikTokPayments() {
     (p.campaign_month || '').toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleExportCSV = () => {
+    downloadCSV(filtered.map((p) => ({
+      Influencer: p.advertiser?.name || '',
+      Campaign: p.campaign_month || '',
+      'Target Videos': p.total_target_videos,
+      'Completed Videos': p.completed_videos,
+      Amount: p.amount,
+      Status: p.status,
+      'Payment Date': p.payment_date || '',
+    })), 'payments');
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-foreground">Payment Confirmation</h1>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" />New Payment</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Create Payment</DialogTitle></DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Influencer *</Label>
-                  <Select value={form.advertiser_id} onValueChange={handleInfluencerSelect}>
-                    <SelectTrigger><SelectValue placeholder="Select influencer" /></SelectTrigger>
-                    <SelectContent>
-                      {influencers.filter((i) => i.is_active).map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Campaign Month</Label><Input type="month" value={form.campaign_month} onChange={(e) => setForm({ ...form, campaign_month: e.target.value })} /></div>
-                {selectedInfluencer && (
-                  <div className="rounded-lg bg-muted p-4 space-y-2">
-                    <div className="flex justify-between text-sm"><span>Target Videos:</span><span className="font-medium">{form.total_target_videos}</span></div>
-                    <div className="flex justify-between text-sm"><span>Completed:</span><span className="font-medium">{form.completed_videos}</span></div>
-                    <div className="flex justify-between text-sm">
-                      <span>Status:</span>
-                      <Badge variant={form.completed_videos >= form.total_target_videos ? 'default' : 'destructive'}>
-                        {form.completed_videos >= form.total_target_videos ? 'Target Reached' : 'Incomplete'}
-                      </Badge>
-                    </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportCSV} disabled={filtered.length === 0}>
+              <Download className="h-4 w-4 mr-2" />CSV
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-2" />New Payment</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Create Payment</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>Influencer *</Label>
+                    <Select value={form.advertiser_id} onValueChange={handleInfluencerSelect}>
+                      <SelectTrigger><SelectValue placeholder="Select influencer" /></SelectTrigger>
+                      <SelectContent>
+                        {influencers.filter((i) => i.is_active).map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
-                <div><Label>Amount</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} /></div>
-                <div><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-                <Button onClick={handleSubmit} disabled={!form.advertiser_id || form.completed_videos < form.total_target_videos} className="w-full">
-                  Create Payment
-                </Button>
-                {form.advertiser_id && form.completed_videos < form.total_target_videos && (
-                  <p className="text-xs text-destructive text-center">Payment can only be created when targets are completed</p>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
+                  <div><Label>Campaign Month</Label><Input type="month" value={form.campaign_month} onChange={(e) => setForm({ ...form, campaign_month: e.target.value })} /></div>
+                  {selectedInfluencer && (
+                    <div className="rounded-lg bg-muted p-4 space-y-2">
+                      <div className="flex justify-between text-sm"><span>Target Videos:</span><span className="font-medium">{form.total_target_videos}</span></div>
+                      <div className="flex justify-between text-sm"><span>Completed:</span><span className="font-medium">{form.completed_videos}</span></div>
+                      <div className="flex justify-between text-sm">
+                        <span>Status:</span>
+                        <Badge variant={form.completed_videos >= form.total_target_videos ? 'default' : 'destructive'}>
+                          {form.completed_videos >= form.total_target_videos ? 'Target Reached — Auto Confirmed' : 'Incomplete'}
+                        </Badge>
+                      </div>
+                    </div>
+                  )}
+                  <div><Label>Amount</Label><Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} /></div>
+                  <div><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+                  <Button onClick={handleSubmit} disabled={!form.advertiser_id || form.completed_videos < form.total_target_videos} className="w-full">
+                    Create & Auto-Confirm Payment
+                  </Button>
+                  {form.advertiser_id && form.completed_videos < form.total_target_videos && (
+                    <p className="text-xs text-destructive text-center">Payment can only be created when targets are completed</p>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         <div className="relative max-w-sm">
@@ -142,9 +164,9 @@ export default function TikTokPayments() {
                     <TableCell><Badge variant={p.status === 'paid' ? 'default' : 'secondary'}>{p.status}</Badge></TableCell>
                     <TableCell>{p.payment_date ? format(new Date(p.payment_date), 'MMM dd, yyyy') : '—'}</TableCell>
                     <TableCell className="text-right">
-                      {p.status === 'unpaid' && (
+                      {p.status === 'unpaid' && isAdmin && (
                         <Button size="sm" variant="outline" onClick={() => confirmPayment(p.id)}>
-                          <CheckCircle className="h-4 w-4 mr-1" />Confirm
+                          <CheckCircle className="h-4 w-4 mr-1" />Override
                         </Button>
                       )}
                     </TableCell>

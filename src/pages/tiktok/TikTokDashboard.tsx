@@ -1,10 +1,10 @@
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokProductDeliveries } from '@/hooks/useTikTokProductDeliveries';
-import { useTikTokDeliveries } from '@/hooks/useTikTokDeliveries';
 import { useTikTokPayments } from '@/hooks/useTikTokPayments';
-import { Users, Video, Package, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import { Users, Video, Package, DollarSign, TrendingUp, TrendingDown, Wallet, Clock } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
 
@@ -13,7 +13,6 @@ const COLORS = ['hsl(var(--primary))', 'hsl(var(--destructive))', 'hsl(var(--mut
 export default function TikTokDashboard() {
   const { influencers } = useTikTokAdvertisers();
   const { productDeliveries } = useTikTokProductDeliveries();
-  const { deliveries } = useTikTokDeliveries();
   const { payments } = useTikTokPayments();
 
   const totalInfluencers = influencers.length;
@@ -25,6 +24,14 @@ export default function TikTokDashboard() {
   const pendingProducts = productDeliveries.filter((d) => d.status === 'pending').length;
   const reachedTarget = influencers.filter((i) => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
   const unreachedTarget = influencers.filter((i) => i.completed_videos < i.target_videos && i.target_videos > 0).length;
+
+  // Financial stats
+  const totalPaid = payments.filter((p) => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
+  const totalPending = payments.filter((p) => p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthlyPaid = payments
+    .filter((p) => p.status === 'paid' && p.payment_date && p.payment_date.startsWith(currentMonth))
+    .reduce((s, p) => s + p.amount, 0);
 
   const performanceData = [
     { name: 'Reached', value: reachedTarget },
@@ -45,7 +52,13 @@ export default function TikTokDashboard() {
     { title: 'Total Influencers', value: totalInfluencers, icon: Users, sub: `${activeInfluencers} active / ${inactiveInfluencers} inactive` },
     { title: 'Target Videos', value: `${totalCompletedVideos} / ${totalTargetVideos}`, icon: Video, sub: `${totalTargetVideos - totalCompletedVideos} remaining` },
     { title: 'Product Deliveries', value: productDeliveries.length, icon: Package, sub: `${deliveredProducts} delivered / ${pendingProducts} pending` },
-    { title: 'Payments', value: payments.length, icon: DollarSign, sub: `${payments.filter((p) => p.status === 'paid').length} paid` },
+    { title: 'Total Payments', value: payments.length, icon: DollarSign, sub: `${payments.filter((p) => p.status === 'paid').length} paid` },
+  ];
+
+  const financialStats = [
+    { title: 'Total Paid', value: `$${totalPaid.toFixed(2)}`, icon: Wallet, sub: 'All time confirmed payments' },
+    { title: 'Pending Payments', value: `$${totalPending.toFixed(2)}`, icon: Clock, sub: 'Awaiting confirmation' },
+    { title: 'This Month', value: `$${monthlyPaid.toFixed(2)}`, icon: DollarSign, sub: `Payments in ${currentMonth}` },
   ];
 
   return (
@@ -62,6 +75,22 @@ export default function TikTokDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{s.value}</div>
+                <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Financial Dashboard */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {financialStats.map((s) => (
+            <Card key={s.title}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{s.title}</CardTitle>
+                <s.icon className="h-5 w-5 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">{s.value}</div>
                 <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
               </CardContent>
             </Card>
