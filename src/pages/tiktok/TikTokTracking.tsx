@@ -9,11 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokDeliveries } from '@/hooks/useTikTokDeliveries';
-import { Search, CheckCircle, XCircle, Video } from 'lucide-react';
+import { useTikTokPayments } from '@/hooks/useTikTokPayments';
+import { Search, CheckCircle, XCircle, Video, Download } from 'lucide-react';
+import { downloadCSV } from '@/lib/csvExport';
+import { toast } from '@/hooks/use-toast';
 
 export default function TikTokTracking() {
   const { influencers, updateInfluencer } = useTikTokAdvertisers();
   const { deliveries } = useTikTokDeliveries();
+  const { createPayment } = useTikTokPayments();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -27,7 +31,24 @@ export default function TikTokTracking() {
   });
 
   const incrementVideo = (i: typeof influencers[0]) => {
-    updateInfluencer.mutate({ id: i.id, completed_videos: i.completed_videos + 1 });
+    const newCompleted = i.completed_videos + 1;
+    updateInfluencer.mutate({ id: i.id, completed_videos: newCompleted });
+
+    // Auto-create confirmed payment when target is reached
+    if (newCompleted >= i.target_videos && i.target_videos > 0 && i.completed_videos < i.target_videos) {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      createPayment.mutate({
+        advertiser_id: i.id,
+        amount: i.salary,
+        campaign_month: currentMonth,
+        total_target_videos: i.target_videos,
+        completed_videos: newCompleted,
+        status: 'paid',
+        payment_date: new Date().toISOString().split('T')[0],
+        notes: 'Auto-confirmed: target videos completed',
+      });
+      toast({ title: 'Target reached!', description: `Payment auto-confirmed for ${i.name}` });
+    }
   };
 
   const decrementVideo = (i: typeof influencers[0]) => {
@@ -36,10 +57,27 @@ export default function TikTokTracking() {
     }
   };
 
+  const handleExportCSV = () => {
+    downloadCSV(filtered.map((i) => ({
+      Name: i.name,
+      Username: i.tiktok_username || '',
+      Category: i.category || '',
+      'Target Videos': i.target_videos,
+      'Completed Videos': i.completed_videos,
+      Remaining: Math.max(0, i.target_videos - i.completed_videos),
+      Status: i.completed_videos >= i.target_videos ? 'Reached' : 'Unreached',
+    })), 'tracking');
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-foreground">Target Video Tracking</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-foreground">Target Video Tracking</h1>
+          <Button variant="outline" onClick={handleExportCSV} disabled={filtered.length === 0}>
+            <Download className="h-4 w-4 mr-2" />CSV
+          </Button>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1 max-w-sm">

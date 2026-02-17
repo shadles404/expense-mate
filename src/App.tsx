@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { AdminRoute } from "@/components/auth/AdminRoute";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -36,13 +37,14 @@ const App = () => (
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
           <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
-          <Route path="/tiktok" element={<ProtectedRoute><TikTokDashboard /></ProtectedRoute>} />
-          <Route path="/tiktok/influencers" element={<ProtectedRoute><TikTokInfluencers /></ProtectedRoute>} />
-          <Route path="/tiktok/tracking" element={<ProtectedRoute><TikTokTracking /></ProtectedRoute>} />
-          <Route path="/tiktok/delivery" element={<ProtectedRoute><TikTokDelivery /></ProtectedRoute>} />
-          <Route path="/tiktok/payments" element={<ProtectedRoute><TikTokPayments /></ProtectedRoute>} />
-          <Route path="/tiktok/reports" element={<ProtectedRoute><TikTokReports /></ProtectedRoute>} />
-          <Route path="/tiktok/settings" element={<ProtectedRoute><TikTokSettingsPage /></ProtectedRoute>} />
+          {/* TikTok routes — Admin only */}
+          <Route path="/tiktok" element={<AdminRoute><TikTokDashboard /></AdminRoute>} />
+          <Route path="/tiktok/influencers" element={<AdminRoute><TikTokInfluencers /></AdminRoute>} />
+          <Route path="/tiktok/tracking" element={<AdminRoute><TikTokTracking /></AdminRoute>} />
+          <Route path="/tiktok/delivery" element={<AdminRoute><TikTokDelivery /></AdminRoute>} />
+          <Route path="/tiktok/payments" element={<AdminRoute><TikTokPayments /></AdminRoute>} />
+          <Route path="/tiktok/reports" element={<AdminRoute><TikTokReports /></AdminRoute>} />
+          <Route path="/tiktok/settings" element={<AdminRoute><TikTokSettingsPage /></AdminRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

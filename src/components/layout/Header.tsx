@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FolderOpen, BarChart3, FileText, CalendarCheck, LogOut, User, Tags, Video, ChevronDown, Users, Target, Package, DollarSign, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -42,6 +43,7 @@ const tiktokNav = [
 export function Header() {
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useUserRole();
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const isTikTokActive = location.pathname.startsWith('/tiktok');
 
@@ -77,33 +79,35 @@ export function Header() {
                 );
               })}
 
-              {/* TikTok Module Dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className={cn(
-                      'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
-                      isTikTokActive
-                        ? 'bg-primary text-primary-foreground shadow-md'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    )}
-                  >
-                    <Video className="h-4 w-4" />
-                    TikTok
-                    <ChevronDown className="h-3 w-3" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  {tiktokNav.map((item) => (
-                    <DropdownMenuItem key={item.href} asChild>
-                      <Link to={item.href} className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4" />
-                        {item.name}
-                      </Link>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* TikTok Module Dropdown — Admin Only */}
+              {isAdmin && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className={cn(
+                        'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
+                        isTikTokActive
+                          ? 'bg-primary text-primary-foreground shadow-md'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <Video className="h-4 w-4" />
+                      TikTok
+                      <ChevronDown className="h-3 w-3" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    {tiktokNav.map((item) => (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link to={item.href} className="flex items-center gap-2">
+                          <item.icon className="h-4 w-4" />
+                          {item.name}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </nav>
           </div>
 
@@ -172,32 +176,34 @@ export function Header() {
             </Link>
           );
         })}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className={cn(
-                'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 whitespace-nowrap',
-                isTikTokActive
-                  ? 'bg-primary text-primary-foreground shadow-md'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              )}
-            >
-              <Video className="h-4 w-4" />
-              TikTok
-              <ChevronDown className="h-3 w-3" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            {tiktokNav.map((item) => (
-              <DropdownMenuItem key={item.href} asChild>
-                <Link to={item.href} className="flex items-center gap-2">
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
-                </Link>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {isAdmin && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 whitespace-nowrap',
+                  isTikTokActive
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                )}
+              >
+                <Video className="h-4 w-4" />
+                TikTok
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {tiktokNav.map((item) => (
+                <DropdownMenuItem key={item.href} asChild>
+                  <Link to={item.href} className="flex items-center gap-2">
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </nav>
     </header>
   );
