@@ -131,6 +131,14 @@ export function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin/settings" className="flex items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Admin Settings
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
                   <DialogTrigger asChild>
                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
