@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_sub_users: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          sub_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sub_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sub_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           color: string | null
@@ -303,6 +330,36 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"]
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      module_permissions: {
+        Row: {
+          access_level: string
+          created_at: string
+          granted_by: string | null
+          id: string
+          module_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_level?: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          module_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_level?: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          module_key?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

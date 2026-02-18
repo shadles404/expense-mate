@@ -20,6 +20,7 @@ import TikTokDelivery from "./pages/tiktok/TikTokDelivery";
 import TikTokPayments from "./pages/tiktok/TikTokPayments";
 import TikTokReports from "./pages/tiktok/TikTokReports";
 import TikTokSettingsPage from "./pages/tiktok/TikTokSettings";
+import AdminSettings from "./pages/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,8 @@ const App = () => (
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
           <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
+          {/* Admin Settings */}
+          <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
           {/* TikTok routes — Admin only */}
           <Route path="/tiktok" element={<AdminRoute><TikTokDashboard /></AdminRoute>} />
           <Route path="/tiktok/influencers" element={<AdminRoute><TikTokInfluencers /></AdminRoute>} />
