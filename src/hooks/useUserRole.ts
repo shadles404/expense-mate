@@ -5,7 +5,7 @@ import { useAuth } from './useAuth';
 export function useUserRole() {
   const { user } = useAuth();
 
-  const { data: roles = [], isLoading } = useQuery({
+  const { data: roles = [], isLoading, isPending, isFetching } = useQuery({
     queryKey: ['user-roles', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
@@ -19,9 +19,14 @@ export function useUserRole() {
     enabled: !!user?.id,
   });
 
+  // In React Query v5, isLoading = isPending && isFetching
+  // When enabled is false, isPending=true but isFetching=false, so isLoading=false
+  // We need to report as loading when user exists but query hasn't resolved yet
+  const effectiveLoading = !user?.id ? false : (isPending || isLoading);
+
   return {
     roles,
     isAdmin: roles.includes('admin'),
-    isLoading,
+    isLoading: effectiveLoading,
   };
 }
