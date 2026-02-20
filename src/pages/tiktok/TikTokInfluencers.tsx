@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,12 +10,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
+import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
 import { Plus, Pencil, Trash2, Search, Download } from 'lucide-react';
 import { downloadCSV } from '@/lib/csvExport';
 import type { TikTokInfluencer } from '@/types/tiktok';
 
 export default function TikTokInfluencers() {
   const { influencers, isLoading, createInfluencer, updateInfluencer, deleteInfluencer } = useTikTokAdvertisers();
+  const { canWriteSection } = useTikTokSectionPermissions();
+  const canWrite = canWriteSection('tiktok_influencers');
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TikTokInfluencer | null>(null);
   const [search, setSearch] = useState('');
@@ -85,46 +89,48 @@ export default function TikTokInfluencers() {
             <Button variant="outline" onClick={handleExportCSV} disabled={filtered.length === 0}>
               <Download className="h-4 w-4 mr-2" />CSV
             </Button>
-            <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button><Plus className="h-4 w-4 mr-2" />Add Influencer</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editing ? 'Edit Influencer' : 'Register Influencer'}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Full Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-                    <div><Label>TikTok Username</Label><Input value={form.tiktok_username} onChange={(e) => setForm({ ...form, tiktok_username: e.target.value })} placeholder="@username" /></div>
+            {canWrite && (
+              <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
+                <DialogTrigger asChild>
+                  <Button><Plus className="h-4 w-4 mr-2" />Add Influencer</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{editing ? 'Edit Influencer' : 'Register Influencer'}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><Label>Full Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+                      <div><Label>TikTok Username</Label><Input value={form.tiktok_username} onChange={(e) => setForm({ ...form, tiktok_username: e.target.value })} placeholder="@username" /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+                      <div><Label>Category / Niche</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Beauty, Food" /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><Label>Target Videos/Month</Label><Input type="number" value={form.target_videos} onChange={(e) => setForm({ ...form, target_videos: Number(e.target.value) })} /></div>
+                      <div><Label>Salary</Label><Input type="number" value={form.salary} onChange={(e) => setForm({ ...form, salary: Number(e.target.value) })} /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div><Label>Agreement Start</Label><Input type="date" value={form.agreement_start_date} onChange={(e) => setForm({ ...form, agreement_start_date: e.target.value })} /></div>
+                      <div><Label>Agreement End</Label><Input type="date" value={form.agreement_end_date} onChange={(e) => setForm({ ...form, agreement_end_date: e.target.value })} /></div>
+                    </div>
+                    <div>
+                      <Label>Status</Label>
+                      <Select value={form.is_active ? 'active' : 'inactive'} onValueChange={(v) => setForm({ ...form, is_active: v === 'active' })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+                    <Button onClick={handleSubmit} disabled={!form.name} className="w-full">{editing ? 'Update' : 'Register'}</Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-                    <div><Label>Category / Niche</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Beauty, Food" /></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Target Videos/Month</Label><Input type="number" value={form.target_videos} onChange={(e) => setForm({ ...form, target_videos: Number(e.target.value) })} /></div>
-                    <div><Label>Salary</Label><Input type="number" value={form.salary} onChange={(e) => setForm({ ...form, salary: Number(e.target.value) })} /></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div><Label>Agreement Start</Label><Input type="date" value={form.agreement_start_date} onChange={(e) => setForm({ ...form, agreement_start_date: e.target.value })} /></div>
-                    <div><Label>Agreement End</Label><Input type="date" value={form.agreement_end_date} onChange={(e) => setForm({ ...form, agreement_end_date: e.target.value })} /></div>
-                  </div>
-                  <div>
-                    <Label>Status</Label>
-                    <Select value={form.is_active ? 'active' : 'inactive'} onValueChange={(v) => setForm({ ...form, is_active: v === 'active' })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-                  <Button onClick={handleSubmit} disabled={!form.name} className="w-full">{editing ? 'Update' : 'Register'}</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </div>
 
@@ -144,7 +150,7 @@ export default function TikTokInfluencers() {
                   <TableHead>Target</TableHead>
                   <TableHead>Completed</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {canWrite && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -160,14 +166,16 @@ export default function TikTokInfluencers() {
                         {i.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(i)}><Pencil className="h-4 w-4" /></Button>
-                      <Button size="icon" variant="ghost" onClick={() => deleteInfluencer.mutate(i.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                    </TableCell>
+                    {canWrite && (
+                      <TableCell className="text-right space-x-1">
+                        <Button size="icon" variant="ghost" onClick={() => openEdit(i)}><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" onClick={() => deleteInfluencer.mutate(i.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No influencers found'}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={canWrite ? 7 : 6} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No influencers found'}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

@@ -1,24 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useAdminContext } from './useAdminContext';
 import { toast } from '@/hooks/use-toast';
 import type { TikTokSettings } from '@/types/tiktok';
 
 export function useTikTokSettings() {
   const { user } = useAuth();
+  const { effectiveUserId } = useAdminContext();
   const queryClient = useQueryClient();
 
   const { data: settings, isLoading } = useQuery({
-    queryKey: ['tiktok-settings', user?.id],
+    queryKey: ['tiktok-settings', effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tiktok_settings')
         .select('*')
+        .eq('user_id', effectiveUserId!)
         .maybeSingle();
       if (error) throw error;
       return data as unknown as TikTokSettings | null;
     },
-    enabled: !!user?.id,
+    enabled: !!effectiveUserId,
   });
 
   const upsertSettings = useMutation({

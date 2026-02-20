@@ -3,19 +3,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { Project, ProjectWithTotals } from '@/types/expense';
 import { toast } from 'sonner';
 import { useAuth } from './useAuth';
+import { useAdminContext } from './useAdminContext';
 
 export function useProjects() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { effectiveUserId } = useAdminContext();
 
   const { data: projects = [], isLoading, error } = useQuery({
-    queryKey: ['projects', user?.id],
+    queryKey: ['projects', effectiveUserId],
     queryFn: async (): Promise<ProjectWithTotals[]> => {
-      if (!user) return [];
+      if (!effectiveUserId) return [];
       
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('*')
+        .eq('user_id', effectiveUserId)
         .order('created_at', { ascending: false });
 
       if (projectsError) throw projectsError;
@@ -49,7 +52,7 @@ export function useProjects() {
 
       return projectsWithTotals;
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const createProject = useMutation({
