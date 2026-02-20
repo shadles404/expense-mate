@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokDeliveries } from '@/hooks/useTikTokDeliveries';
 import { useTikTokPayments } from '@/hooks/useTikTokPayments';
+import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
 import { Search, CheckCircle, XCircle, Video, Download } from 'lucide-react';
 import { downloadCSV } from '@/lib/csvExport';
 import { toast } from '@/hooks/use-toast';
@@ -18,6 +19,9 @@ export default function TikTokTracking() {
   const { influencers, updateInfluencer } = useTikTokAdvertisers();
   const { deliveries } = useTikTokDeliveries();
   const { createPayment } = useTikTokPayments();
+  const { canWriteSection } = useTikTokSectionPermissions();
+  const canWrite = canWriteSection('tiktok_tracking');
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -34,7 +38,6 @@ export default function TikTokTracking() {
     const newCompleted = i.completed_videos + 1;
     updateInfluencer.mutate({ id: i.id, completed_videos: newCompleted });
 
-    // Auto-create confirmed payment when target is reached
     if (newCompleted >= i.target_videos && i.target_videos > 0 && i.completed_videos < i.target_videos) {
       const currentMonth = new Date().toISOString().slice(0, 7);
       createPayment.mutate({
@@ -124,14 +127,22 @@ export default function TikTokTracking() {
                         {i.target_videos - i.completed_videos > 0 ? `${i.target_videos - i.completed_videos} remaining` : 'All targets completed!'}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => decrementVideo(i)} disabled={i.completed_videos === 0}>−</Button>
+                    {canWrite && (
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="outline" onClick={() => decrementVideo(i)} disabled={i.completed_videos === 0}>−</Button>
+                        <div className="flex items-center gap-1 px-3 py-1 bg-muted rounded-md">
+                          <Video className="h-4 w-4" />
+                          <span className="font-bold">{i.completed_videos}</span>
+                        </div>
+                        <Button size="sm" onClick={() => incrementVideo(i)}>+</Button>
+                      </div>
+                    )}
+                    {!canWrite && (
                       <div className="flex items-center gap-1 px-3 py-1 bg-muted rounded-md">
                         <Video className="h-4 w-4" />
                         <span className="font-bold">{i.completed_videos}</span>
                       </div>
-                      <Button size="sm" onClick={() => incrementVideo(i)}>+</Button>
-                    </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

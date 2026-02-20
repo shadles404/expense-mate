@@ -1,24 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useAdminContext } from './useAdminContext';
 import { toast } from '@/hooks/use-toast';
 import type { TikTokPayment } from '@/types/tiktok';
 
 export function useTikTokPayments() {
   const { user } = useAuth();
+  const { effectiveUserId } = useAdminContext();
   const queryClient = useQueryClient();
 
   const { data: payments = [], isLoading } = useQuery({
-    queryKey: ['tiktok-payments', user?.id],
+    queryKey: ['tiktok-payments', effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tiktok_payments')
         .select('*, advertiser:tiktok_advertisers(*)')
+        .eq('user_id', effectiveUserId!)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as unknown as TikTokPayment[];
     },
-    enabled: !!user?.id,
+    enabled: !!effectiveUserId,
   });
 
   const createPayment = useMutation({

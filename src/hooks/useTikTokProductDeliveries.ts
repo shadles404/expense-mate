@@ -1,24 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useAdminContext } from './useAdminContext';
 import { toast } from '@/hooks/use-toast';
 import type { TikTokProductDelivery } from '@/types/tiktok';
 
 export function useTikTokProductDeliveries() {
   const { user } = useAuth();
+  const { effectiveUserId } = useAdminContext();
   const queryClient = useQueryClient();
 
   const { data: productDeliveries = [], isLoading } = useQuery({
-    queryKey: ['tiktok-product-deliveries', user?.id],
+    queryKey: ['tiktok-product-deliveries', effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tiktok_product_deliveries')
         .select('*, advertiser:tiktok_advertisers(*)')
+        .eq('user_id', effectiveUserId!)
         .order('date_sent', { ascending: false });
       if (error) throw error;
       return data as unknown as TikTokProductDelivery[];
     },
-    enabled: !!user?.id,
+    enabled: !!effectiveUserId,
   });
 
   const createProductDelivery = useMutation({

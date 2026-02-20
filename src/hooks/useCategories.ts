@@ -3,25 +3,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { ExpenseCategory } from '@/types/category';
 import { toast } from 'sonner';
 import { useAuth } from './useAuth';
+import { useAdminContext } from './useAdminContext';
 
 export function useCategories() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { effectiveUserId } = useAdminContext();
 
   const { data: categories = [], isLoading, error } = useQuery({
-    queryKey: ['expense_categories', user?.id],
+    queryKey: ['expense_categories', effectiveUserId],
     queryFn: async (): Promise<ExpenseCategory[]> => {
-      if (!user) return [];
+      if (!effectiveUserId) return [];
       
       const { data, error } = await supabase
         .from('expense_categories')
         .select('*')
+        .eq('user_id', effectiveUserId)
         .order('name', { ascending: true });
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!effectiveUserId,
   });
 
   const createCategory = useMutation({

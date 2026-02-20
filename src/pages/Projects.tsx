@@ -10,11 +10,14 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProjectWithTotals, PaymentProjectStatus } from '@/types/expense';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 
 type PaymentFilter = 'all' | PaymentProjectStatus;
 
 export default function Projects() {
   const { projects, isLoading, createProject, updateProject, deleteProject } = useProjects();
+  const { canWrite } = useModulePermissions();
+  const canWriteProjects = canWrite('projects');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editProject, setEditProject] = useState<ProjectWithTotals | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -66,10 +69,12 @@ export default function Projects() {
               Manage all your expense projects
             </p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} className="btn-float gap-2">
-            <Plus className="h-4 w-4" />
-            New Project
-          </Button>
+          {canWriteProjects && (
+            <Button onClick={() => setIsCreateOpen(true)} className="btn-float gap-2">
+              <Plus className="h-4 w-4" />
+              New Project
+            </Button>
+          )}
         </div>
 
         {/* Search & Filters */}
@@ -110,11 +115,8 @@ export default function Projects() {
               <ProjectCard
                 key={project.id}
                 project={project}
-                onEdit={(p) => {
-                  setEditProject(p);
-                  setIsCreateOpen(true);
-                }}
-                onDelete={(id) => setDeleteId(id)}
+                onEdit={canWriteProjects ? (p) => { setEditProject(p); setIsCreateOpen(true); } : () => {}}
+                onDelete={canWriteProjects ? (id) => setDeleteId(id) : () => {}}
               />
             ))}
           </div>

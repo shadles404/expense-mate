@@ -11,6 +11,7 @@ import { useTikTokProductDeliveries } from '@/hooks/useTikTokProductDeliveries';
 import { useTikTokPayments } from '@/hooks/useTikTokPayments';
 import { useTikTokMonthlyReports } from '@/hooks/useTikTokMonthlyReports';
 import { useAuth } from '@/hooks/useAuth';
+import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { Download, Save } from 'lucide-react';
@@ -24,6 +25,8 @@ export default function TikTokReports() {
   const { productDeliveries } = useTikTokProductDeliveries();
   const { payments } = useTikTokPayments();
   const { reports, saveReport } = useTikTokMonthlyReports();
+  const { canWriteSection } = useTikTokSectionPermissions();
+  const canWrite = canWriteSection('tiktok_reports');
   const [filterInfluencer, setFilterInfluencer] = useState('all');
   const [filterMonth, setFilterMonth] = useState('all');
 
@@ -138,9 +141,11 @@ export default function TikTokReports() {
                 {influencers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={handleSaveMonthlyReport}>
-              <Save className="h-4 w-4 mr-2" />Save Monthly Snapshot
-            </Button>
+            {canWrite && (
+              <Button variant="outline" onClick={handleSaveMonthlyReport}>
+                <Save className="h-4 w-4 mr-2" />Save Monthly Snapshot
+              </Button>
+            )}
           </div>
         </div>
 

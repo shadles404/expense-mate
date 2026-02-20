@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useAdminContext } from './useAdminContext';
 import { toast } from '@/hooks/use-toast';
 
 export interface MonthlyReport {
@@ -22,19 +23,21 @@ export interface MonthlyReport {
 
 export function useTikTokMonthlyReports() {
   const { user } = useAuth();
+  const { effectiveUserId } = useAdminContext();
   const queryClient = useQueryClient();
 
   const { data: reports = [], isLoading } = useQuery({
-    queryKey: ['tiktok-monthly-reports', user?.id],
+    queryKey: ['tiktok-monthly-reports', effectiveUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tiktok_monthly_reports' as any)
         .select('*')
+        .eq('user_id', effectiveUserId!)
         .order('report_month', { ascending: false });
       if (error) throw error;
       return data as unknown as MonthlyReport[];
     },
-    enabled: !!user?.id,
+    enabled: !!effectiveUserId,
   });
 
   const saveReport = useMutation({

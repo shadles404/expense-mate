@@ -8,9 +8,11 @@ import { ProjectCard } from '@/components/projects/ProjectCard';
 import { UpcomingSchedules } from '@/components/dashboard/UpcomingSchedules';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 
 export default function Dashboard() {
   const { projects, isLoading } = useProjects();
+  const { canWrite } = useModulePermissions();
 
   const stats = useMemo(() => {
     const totalProjects = projects.length;
@@ -40,12 +42,14 @@ export default function Dashboard() {
               Track and manage your expense projects
             </p>
           </div>
-          <Link to="/projects">
-            <Button className="btn-float gap-2">
-              <Plus className="h-4 w-4" />
-              New Project
-            </Button>
-          </Link>
+          {canWrite('dashboard') && (
+            <Link to="/projects">
+              <Button className="btn-float gap-2">
+                <Plus className="h-4 w-4" />
+                New Project
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Stats Grid */}
