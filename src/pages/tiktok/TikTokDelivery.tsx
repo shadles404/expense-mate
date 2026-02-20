@@ -138,6 +138,31 @@ export default function TikTokDelivery() {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="p-4 flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Total Records</span>
+              <span className="text-2xl font-bold text-foreground">{filtered.length}</span>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Total Price</span>
+              <span className="text-2xl font-bold text-foreground">
+                ${filtered.reduce((sum, d) => sum + d.price * d.quantity, 0).toFixed(2)}
+              </span>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Total Items</span>
+              <span className="text-2xl font-bold text-foreground">
+                {filtered.reduce((sum, d) => sum + d.quantity, 0)}
+              </span>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
