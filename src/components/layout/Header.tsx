@@ -3,6 +3,7 @@ import { LayoutDashboard, FolderOpen, BarChart3, FileText, CalendarCheck, LogOut
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useModulePermissions, useTikTokSectionPermissions, TIKTOK_SECTION_KEYS } from '@/hooks/useModulePermissions';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -23,29 +24,43 @@ import { CategoryManager } from '@/components/categories/CategoryManager';
 import { useState } from 'react';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Projects', href: '/projects', icon: FolderOpen },
-  { name: 'Schedule', href: '/schedule', icon: CalendarCheck },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Reports', href: '/reports', icon: FileText },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, moduleKey: 'dashboard' },
+  { name: 'Projects', href: '/projects', icon: FolderOpen, moduleKey: 'projects' },
+  { name: 'Schedule', href: '/schedule', icon: CalendarCheck, moduleKey: 'schedule' },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3, moduleKey: 'analytics' },
+  { name: 'Reports', href: '/reports', icon: FileText, moduleKey: 'reports' },
 ];
 
-const tiktokNav = [
-  { name: 'Dashboard', href: '/tiktok', icon: LayoutDashboard },
-  { name: 'Influencers', href: '/tiktok/influencers', icon: Users },
-  { name: 'Tracking', href: '/tiktok/tracking', icon: Target },
-  { name: 'Delivery', href: '/tiktok/delivery', icon: Package },
-  { name: 'Payments', href: '/tiktok/payments', icon: DollarSign },
-  { name: 'Reports', href: '/tiktok/reports', icon: BarChart3 },
-  { name: 'Settings', href: '/tiktok/settings', icon: Settings },
-];
+const tiktokNavIconMap: Record<string, React.ElementType> = {
+  tiktok_dashboard: LayoutDashboard,
+  tiktok_influencers: Users,
+  tiktok_tracking: Target,
+  tiktok_delivery: Package,
+  tiktok_payments: DollarSign,
+  tiktok_reports: BarChart3,
+  tiktok_settings: Settings,
+};
 
 export function Header() {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { isAdmin } = useUserRole();
+  const { canAccess } = useModulePermissions();
+  const { canAccessSection } = useTikTokSectionPermissions();
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const isTikTokActive = location.pathname.startsWith('/tiktok');
+
+  // For non-admins, filter main nav by module permissions
+  const visibleNav = isAdmin
+    ? navigation
+    : navigation.filter(item => canAccess(item.moduleKey));
+
+  // TikTok sections visible to this user
+  const visibleTikTokSections = isAdmin
+    ? TIKTOK_SECTION_KEYS
+    : TIKTOK_SECTION_KEYS.filter(s => canAccessSection(s.key));
+
+  const showTikTok = isAdmin || (canAccess('tiktok') && visibleTikTokSections.length > 0);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-xl">
@@ -59,8 +74,8 @@ export function Header() {
               <span className="text-xl font-bold text-foreground">ExpenseFlow</span>
             </Link>
             <nav className="hidden md:flex items-center gap-1">
-              {navigation.map((item) => {
-                const isActive = location.pathname === item.href || 
+              {visibleNav.map((item) => {
+                const isActive = location.pathname === item.href ||
                   (item.href !== '/' && location.pathname.startsWith(item.href));
                 return (
                   <Link
@@ -79,8 +94,8 @@ export function Header() {
                 );
               })}
 
-              {/* TikTok Module Dropdown — Admin Only */}
-              {isAdmin && (
+              {/* TikTok Module Dropdown */}
+              {showTikTok && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -96,15 +111,18 @@ export function Header() {
                       <ChevronDown className="h-3 w-3" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    {tiktokNav.map((item) => (
-                      <DropdownMenuItem key={item.href} asChild>
-                        <Link to={item.href} className="flex items-center gap-2">
-                          <item.icon className="h-4 w-4" />
-                          {item.name}
-                        </Link>
-                      </DropdownMenuItem>
-                    ))}
+                  <DropdownMenuContent align="start" className="w-52">
+                    {visibleTikTokSections.map((item) => {
+                      const Icon = tiktokNavIconMap[item.key] || Video;
+                      return (
+                        <DropdownMenuItem key={item.key} asChild>
+                          <Link to={item.href} className="flex items-center gap-2">
+                            <Icon className="h-4 w-4" />
+                            {item.label}
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -163,10 +181,11 @@ export function Header() {
           )}
         </div>
       </div>
+
       {/* Mobile navigation */}
       <nav className="flex md:hidden items-center gap-1 px-4 pb-3 overflow-x-auto">
-        {navigation.map((item) => {
-          const isActive = location.pathname === item.href || 
+        {visibleNav.map((item) => {
+          const isActive = location.pathname === item.href ||
             (item.href !== '/' && location.pathname.startsWith(item.href));
           return (
             <Link
@@ -184,7 +203,7 @@ export function Header() {
             </Link>
           );
         })}
-        {isAdmin && (
+        {showTikTok && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -201,14 +220,17 @@ export function Header() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              {tiktokNav.map((item) => (
-                <DropdownMenuItem key={item.href} asChild>
-                  <Link to={item.href} className="flex items-center gap-2">
-                    <item.icon className="h-4 w-4" />
-                    {item.name}
-                  </Link>
-                </DropdownMenuItem>
-              ))}
+              {visibleTikTokSections.map((item) => {
+                const Icon = tiktokNavIconMap[item.key] || Video;
+                return (
+                  <DropdownMenuItem key={item.key} asChild>
+                    <Link to={item.href} className="flex items-center gap-2">
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  </DropdownMenuItem>
+                );
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

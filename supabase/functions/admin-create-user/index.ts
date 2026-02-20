@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const { email, password, displayName, role, modulePermissions } = await req.json()
+    const { email, password, displayName, phone, role, modulePermissions, tiktokSectionPermissions } = await req.json()
 
     if (!email || !password) {
       return new Response(JSON.stringify({ error: 'Email and password required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -51,6 +51,11 @@ Deno.serve(async (req) => {
     }
 
     const newUserId = newUser.user.id
+
+    // Update profile with phone number (profile created by trigger)
+    if (phone) {
+      await supabaseAdmin.from('profiles').update({ phone, display_name: displayName || email.split('@')[0] }).eq('user_id', newUserId)
+    }
 
     // Set role (default 'user')
     if (role && role !== 'user') {
@@ -72,6 +77,17 @@ Deno.serve(async (req) => {
         granted_by: caller.id,
       }))
       await supabaseAdmin.from('module_permissions').insert(perms)
+    }
+
+    // Set TikTok section permissions
+    if (tiktokSectionPermissions && Array.isArray(tiktokSectionPermissions)) {
+      const sectionPerms = tiktokSectionPermissions.map((p: { section_key: string; access_level: string }) => ({
+        user_id: newUserId,
+        section_key: p.section_key,
+        access_level: p.access_level,
+        granted_by: caller.id,
+      }))
+      await supabaseAdmin.from('tiktok_section_permissions').insert(sectionPerms)
     }
 
     return new Response(JSON.stringify({ user: { id: newUserId, email } }), {
