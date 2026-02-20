@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import { AdminRoute } from "@/components/auth/AdminRoute";
+import { AdminRoute, TikTokSectionRoute } from "@/components/auth/AdminRoute";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
@@ -40,14 +40,14 @@ const App = () => (
           <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
           {/* Admin Settings */}
           <Route path="/admin/settings" element={<AdminRoute><AdminSettings /></AdminRoute>} />
-          {/* TikTok routes — Admin only */}
-          <Route path="/tiktok" element={<AdminRoute><TikTokDashboard /></AdminRoute>} />
-          <Route path="/tiktok/influencers" element={<AdminRoute><TikTokInfluencers /></AdminRoute>} />
-          <Route path="/tiktok/tracking" element={<AdminRoute><TikTokTracking /></AdminRoute>} />
-          <Route path="/tiktok/delivery" element={<AdminRoute><TikTokDelivery /></AdminRoute>} />
-          <Route path="/tiktok/payments" element={<AdminRoute><TikTokPayments /></AdminRoute>} />
-          <Route path="/tiktok/reports" element={<AdminRoute><TikTokReports /></AdminRoute>} />
-          <Route path="/tiktok/settings" element={<AdminRoute><TikTokSettingsPage /></AdminRoute>} />
+          {/* TikTok routes — Admin or permitted sub-users */}
+          <Route path="/tiktok" element={<ProtectedRoute><TikTokSectionRoute sectionKey="tiktok_dashboard"><TikTokDashboard /></TikTokSectionRoute></ProtectedRoute>} />
+          <Route path="/tiktok/influencers" element={<ProtectedRoute><TikTokSectionRoute sectionKey="tiktok_influencers"><TikTokInfluencers /></TikTokSectionRoute></ProtectedRoute>} />
+          <Route path="/tiktok/tracking" element={<ProtectedRoute><TikTokSectionRoute sectionKey="tiktok_tracking"><TikTokTracking /></TikTokSectionRoute></ProtectedRoute>} />
+          <Route path="/tiktok/delivery" element={<ProtectedRoute><TikTokSectionRoute sectionKey="tiktok_delivery"><TikTokDelivery /></TikTokSectionRoute></ProtectedRoute>} />
+          <Route path="/tiktok/payments" element={<ProtectedRoute><TikTokSectionRoute sectionKey="tiktok_payments"><TikTokPayments /></TikTokSectionRoute></ProtectedRoute>} />
+          <Route path="/tiktok/reports" element={<ProtectedRoute><TikTokSectionRoute sectionKey="tiktok_reports"><TikTokReports /></TikTokSectionRoute></ProtectedRoute>} />
+          <Route path="/tiktok/settings" element={<ProtectedRoute><TikTokSectionRoute sectionKey="tiktok_settings"><TikTokSettingsPage /></TikTokSectionRoute></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
@@ -56,3 +56,4 @@ const App = () => (
 );
 
 export default App;
+

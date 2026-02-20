@@ -369,6 +369,7 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          phone: string | null
           updated_at: string
           user_id: string
         }
@@ -377,6 +378,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          phone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -385,6 +387,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          phone?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -760,6 +763,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tiktok_section_permissions: {
+        Row: {
+          access_level: string
+          created_at: string
+          granted_by: string | null
+          id: string
+          section_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_level?: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          section_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_level?: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          section_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       tiktok_settings: {
         Row: {
