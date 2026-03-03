@@ -54,7 +54,7 @@ export interface TikTokPayment {
   user_id: string;
   advertiser_id: string;
   amount: number;
-  status: 'paid' | 'unpaid';
+  status: 'paid' | 'unpaid' | 'pending' | 'suspended';
   payment_date: string | null;
   campaign_month: string | null;
   total_target_videos: number;
@@ -66,6 +66,16 @@ export interface TikTokPayment {
   created_at: string;
   updated_at: string;
   advertiser?: TikTokInfluencer;
+}
+
+export interface PaymentAuditLog {
+  id: string;
+  payment_id: string;
+  changed_by: string;
+  old_status: string | null;
+  new_status: string;
+  notes: string | null;
+  created_at: string;
 }
 
 export interface TikTokSettings {

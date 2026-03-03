@@ -1,12 +1,18 @@
+import { useState, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokProductDeliveries } from '@/hooks/useTikTokProductDeliveries';
 import { useTikTokPayments } from '@/hooks/useTikTokPayments';
-import { Users, Video, Package, DollarSign, TrendingUp, TrendingDown, Wallet, Clock } from 'lucide-react';
+import { Users, Video, Package, DollarSign, TrendingUp, TrendingDown, Wallet, Clock, Download, Percent } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
+import { Badge } from '@/components/ui/badge';
+import { downloadCSV } from '@/lib/csvExport';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--destructive))', 'hsl(var(--muted-foreground))', 'hsl(var(--accent-foreground))'];
 
@@ -15,23 +21,50 @@ export default function TikTokDashboard() {
   const { productDeliveries } = useTikTokProductDeliveries();
   const { payments } = useTikTokPayments();
 
+  const [filterMonth, setFilterMonth] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+
+  const availableMonths = useMemo(() =>
+    [...new Set(payments.map(p => p.campaign_month).filter(Boolean))].sort().reverse()
+  , [payments]);
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+
+  // Filtered payments
+  const filteredPayments = useMemo(() => payments.filter(p => {
+    const matchMonth = filterMonth === 'all' || p.campaign_month === filterMonth;
+    const matchStatus = filterStatus === 'all' || p.status === filterStatus;
+    return matchMonth && matchStatus;
+  }), [payments, filterMonth, filterStatus]);
+
   const totalInfluencers = influencers.length;
-  const activeInfluencers = influencers.filter((i) => i.is_active).length;
+  const activeInfluencers = influencers.filter(i => i.is_active).length;
   const inactiveInfluencers = totalInfluencers - activeInfluencers;
   const totalTargetVideos = influencers.reduce((s, i) => s + i.target_videos, 0);
   const totalCompletedVideos = influencers.reduce((s, i) => s + i.completed_videos, 0);
-  const deliveredProducts = productDeliveries.filter((d) => d.status === 'sent').length;
-  const pendingProducts = productDeliveries.filter((d) => d.status === 'pending').length;
-  const reachedTarget = influencers.filter((i) => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
-  const unreachedTarget = influencers.filter((i) => i.completed_videos < i.target_videos && i.target_videos > 0).length;
+  const deliveredProducts = productDeliveries.filter(d => d.status === 'sent').length;
+  const pendingProducts = productDeliveries.filter(d => d.status === 'pending').length;
+  const reachedTarget = influencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
+  const unreachedTarget = influencers.filter(i => i.completed_videos < i.target_videos && i.target_videos > 0).length;
+  const totalWithTarget = influencers.filter(i => i.target_videos > 0).length;
+  const completionRate = totalWithTarget > 0 ? Math.round((reachedTarget / totalWithTarget) * 100) : 0;
 
   // Financial stats
-  const totalPaid = payments.filter((p) => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
-  const totalPending = payments.filter((p) => p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const monthlyPaid = payments
-    .filter((p) => p.status === 'paid' && p.payment_date && p.payment_date.startsWith(currentMonth))
-    .reduce((s, p) => s + p.amount, 0);
+  const totalPaid = filteredPayments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
+  const totalPending = filteredPayments.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
+  const suspendedCount = filteredPayments.filter(p => p.status === 'suspended').length;
+  const monthlyPaid = payments.filter(p => p.status === 'paid' && p.campaign_month === currentMonth).reduce((s, p) => s + p.amount, 0);
+  const paidThisMonthCount = payments.filter(p => p.status === 'paid' && p.campaign_month === currentMonth).length;
+
+  // Monthly trend data
+  const monthlyTrend = useMemo(() => {
+    const months = [...new Set(payments.map(p => p.campaign_month).filter(Boolean))].sort();
+    return months.map(m => ({
+      month: m!,
+      paid: payments.filter(p => p.campaign_month === m && p.status === 'paid').reduce((s, p) => s + p.amount, 0),
+      pending: payments.filter(p => p.campaign_month === m && (p.status === 'pending' || p.status === 'unpaid')).reduce((s, p) => s + p.amount, 0),
+    }));
+  }, [payments]);
 
   const performanceData = [
     { name: 'Reached', value: reachedTarget },
@@ -46,28 +79,102 @@ export default function TikTokDashboard() {
   const chartConfig = {
     value: { label: 'Count', color: 'hsl(var(--primary))' },
     count: { label: 'Count', color: 'hsl(var(--primary))' },
+    paid: { label: 'Paid', color: 'hsl(var(--primary))' },
+    pending: { label: 'Pending', color: 'hsl(var(--destructive))' },
+  };
+
+  const handleExportCSV = () => {
+    downloadCSV(filteredPayments.map(p => ({
+      Influencer: p.advertiser?.name || '',
+      Campaign: p.campaign_month || '',
+      Amount: p.amount,
+      Status: p.status,
+      Date: p.payment_date || '',
+    })), 'tiktok-dashboard-export');
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('TikTok Dashboard Report', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+
+    // KPIs
+    doc.setFontSize(12);
+    doc.text('Key Metrics', 14, 42);
+    autoTable(doc, {
+      startY: 46,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Influencers', String(totalInfluencers)],
+        ['Target Completion Rate', `${completionRate}%`],
+        ['Total Paid', `$${totalPaid.toFixed(2)}`],
+        ['Pending Payments', `$${totalPending.toFixed(2)}`],
+        ['Suspended', String(suspendedCount)],
+        ['This Month Paid', `$${monthlyPaid.toFixed(2)}`],
+      ],
+    });
+
+    // Payment details
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    doc.text('Payment Details', 14, finalY);
+    autoTable(doc, {
+      startY: finalY + 4,
+      head: [['Influencer', 'Campaign', 'Amount', 'Status']],
+      body: filteredPayments.map(p => [
+        p.advertiser?.name || '',
+        p.campaign_month || '',
+        `$${p.amount.toFixed(2)}`,
+        p.status,
+      ]),
+    });
+
+    doc.save('tiktok-dashboard-report.pdf');
   };
 
   const stats = [
     { title: 'Total Influencers', value: totalInfluencers, icon: Users, sub: `${activeInfluencers} active / ${inactiveInfluencers} inactive` },
     { title: 'Target Videos', value: `${totalCompletedVideos} / ${totalTargetVideos}`, icon: Video, sub: `${totalTargetVideos - totalCompletedVideos} remaining` },
     { title: 'Product Deliveries', value: productDeliveries.length, icon: Package, sub: `${deliveredProducts} delivered / ${pendingProducts} pending` },
-    { title: 'Total Payments', value: payments.length, icon: DollarSign, sub: `${payments.filter((p) => p.status === 'paid').length} paid` },
+    { title: 'Completion Rate', value: `${completionRate}%`, icon: Percent, sub: `${reachedTarget}/${totalWithTarget} reached target` },
   ];
 
   const financialStats = [
-    { title: 'Total Paid', value: `$${totalPaid.toFixed(2)}`, icon: Wallet, sub: 'All time confirmed payments' },
-    { title: 'Pending Payments', value: `$${totalPending.toFixed(2)}`, icon: Clock, sub: 'Awaiting confirmation' },
+    { title: 'Total Paid', value: `$${totalPaid.toFixed(2)}`, icon: Wallet, sub: `${paidThisMonthCount} paid this month` },
+    { title: 'Pending Payments', value: `$${totalPending.toFixed(2)}`, icon: Clock, sub: `${suspendedCount} suspended` },
     { title: 'This Month', value: `$${monthlyPaid.toFixed(2)}`, icon: DollarSign, sub: `Payments in ${currentMonth}` },
   ];
 
   return (
     <Layout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-foreground">TikTok Dashboard</h1>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h1 className="text-3xl font-bold text-foreground">TikTok Dashboard</h1>
+          <div className="flex gap-2 flex-wrap">
+            <Select value={filterMonth} onValueChange={setFilterMonth}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="All Months" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Months</SelectItem>
+                {availableMonths.map(m => <SelectItem key={m} value={m!}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[140px]"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={handleExportCSV}><Download className="h-4 w-4 mr-2" />CSV</Button>
+            <Button variant="outline" size="sm" onClick={handleExportPDF}><Download className="h-4 w-4 mr-2" />PDF</Button>
+          </div>
+        </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((s) => (
+          {stats.map(s => (
             <Card key={s.title}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">{s.title}</CardTitle>
@@ -81,9 +188,8 @@ export default function TikTokDashboard() {
           ))}
         </div>
 
-        {/* Financial Dashboard */}
         <div className="grid gap-4 md:grid-cols-3">
-          {financialStats.map((s) => (
+          {financialStats.map(s => (
             <Card key={s.title}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">{s.title}</CardTitle>
@@ -98,12 +204,31 @@ export default function TikTokDashboard() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
+          {/* Monthly Payment Trend */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Target Performance</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="text-lg">Monthly Payment Trend</CardTitle></CardHeader>
             <CardContent>
-              {performanceData.some((d) => d.value > 0) ? (
+              {monthlyTrend.length > 0 ? (
+                <ChartContainer config={chartConfig} className="h-[250px]">
+                  <BarChart data={monthlyTrend}>
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Bar dataKey="paid" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="pending" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </BarChart>
+                </ChartContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[250px] text-muted-foreground">No payment data yet</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Target Performance Pie */}
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Target Performance</CardTitle></CardHeader>
+            <CardContent>
+              {performanceData.some(d => d.value > 0) ? (
                 <ChartContainer config={chartConfig} className="h-[250px]">
                   <PieChart>
                     <Pie data={performanceData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
@@ -119,22 +244,6 @@ export default function TikTokDashboard() {
               )}
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Influencer Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[250px]">
-                <BarChart data={statusData}>
-                  <XAxis dataKey="name" />
-                  <YAxis allowDecimals={false} />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -146,15 +255,16 @@ export default function TikTokDashboard() {
             <CardContent>
               <div className="space-y-3">
                 {influencers
-                  .filter((i) => i.target_videos > 0)
+                  .filter(i => i.target_videos > 0)
                   .sort((a, b) => (b.completed_videos / b.target_videos) - (a.completed_videos / a.target_videos))
                   .slice(0, 5)
-                  .map((i) => (
+                  .map(i => (
                     <div key={i.id} className="flex items-center justify-between">
                       <span className="font-medium text-sm">{i.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {i.completed_videos}/{i.target_videos} videos
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{i.completed_videos}/{i.target_videos}</span>
+                        {i.completed_videos >= i.target_videos && <Badge variant="default">✓</Badge>}
+                      </div>
                     </div>
                   ))}
                 {influencers.length === 0 && <p className="text-sm text-muted-foreground">No influencers registered</p>}
@@ -170,24 +280,37 @@ export default function TikTokDashboard() {
             <CardContent>
               <div className="space-y-3">
                 {influencers
-                  .filter((i) => i.target_videos > 0 && i.completed_videos < i.target_videos)
+                  .filter(i => i.target_videos > 0 && i.completed_videos < i.target_videos)
                   .sort((a, b) => (a.completed_videos / a.target_videos) - (b.completed_videos / b.target_videos))
                   .slice(0, 5)
-                  .map((i) => (
+                  .map(i => (
                     <div key={i.id} className="flex items-center justify-between">
                       <span className="font-medium text-sm">{i.name}</span>
-                      <span className="text-sm text-destructive">
-                        {i.target_videos - i.completed_videos} remaining
-                      </span>
+                      <span className="text-sm text-destructive">{i.target_videos - i.completed_videos} remaining</span>
                     </div>
                   ))}
-                {influencers.filter((i) => i.completed_videos < i.target_videos).length === 0 && (
+                {influencers.filter(i => i.completed_videos < i.target_videos).length === 0 && (
                   <p className="text-sm text-muted-foreground">All targets met!</p>
                 )}
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Influencer Status */}
+        <Card>
+          <CardHeader><CardTitle className="text-lg">Influencer Status</CardTitle></CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[250px]">
+              <BarChart data={statusData}>
+                <XAxis dataKey="name" />
+                <YAxis allowDecimals={false} />
+                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );

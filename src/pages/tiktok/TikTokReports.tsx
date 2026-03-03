@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,8 @@ import { BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { Download, Save } from 'lucide-react';
 import { downloadCSV } from '@/lib/csvExport';
 import { toast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function TikTokReports() {
   const { user } = useAuth();
@@ -30,79 +31,114 @@ export default function TikTokReports() {
   const [filterInfluencer, setFilterInfluencer] = useState('all');
   const [filterMonth, setFilterMonth] = useState('all');
 
-  const chartConfig = { count: { label: 'Count', color: 'hsl(var(--primary))' } };
+  const chartConfig = {
+    target: { label: 'Target', color: 'hsl(var(--muted-foreground))' },
+    completed: { label: 'Completed', color: 'hsl(var(--primary))' },
+    count: { label: 'Count', color: 'hsl(var(--primary))' },
+  };
 
-  // Generate available months from data
-  const availableMonths = [...new Set([
-    ...payments.map((p) => p.campaign_month).filter(Boolean),
-    ...reports.map((r) => r.report_month),
-  ])].sort().reverse();
+  const availableMonths = useMemo(() => [...new Set([
+    ...payments.map(p => p.campaign_month).filter(Boolean),
+    ...reports.map(r => r.report_month),
+  ])].sort().reverse(), [payments, reports]);
+
+  // Auto-save monthly report when data changes
+  useEffect(() => {
+    if (!user || !canWrite || influencers.length === 0) return;
+    const month = new Date().toISOString().slice(0, 7);
+    const reached = influencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
+    const unreached = influencers.filter(i => i.completed_videos < i.target_videos && i.target_videos > 0).length;
+    const monthPayments = payments.filter(p => p.campaign_month === month || p.payment_date?.startsWith(month));
+    const paidTotal = monthPayments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
+    const pendingTotal = payments.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
+    const suspendedList = influencers.filter(i => {
+      const pay = payments.find(p => p.advertiser_id === i.id && p.campaign_month === month);
+      return pay?.status === 'suspended';
+    });
+
+    // Debounced auto-save
+    const timer = setTimeout(() => {
+      saveReport.mutate({
+        user_id: user.id,
+        report_month: month,
+        total_influencers: influencers.length,
+        active_influencers: influencers.filter(i => i.is_active).length,
+        total_target_videos: influencers.reduce((s, i) => s + i.target_videos, 0),
+        total_completed_videos: influencers.reduce((s, i) => s + i.completed_videos, 0),
+        reached_target: reached,
+        unreached_target: unreached,
+        total_payments_made: paidTotal,
+        total_payments_pending: pendingTotal,
+        total_deliveries: productDeliveries.length,
+        report_data: {
+          influencers: influencers.map(i => ({
+            name: i.name, target: i.target_videos, completed: i.completed_videos,
+            status: i.completed_videos >= i.target_videos ? 'reached' : 'unreached',
+          })),
+          suspended: suspendedList.map(i => i.name),
+          campaign_analytics: availableMonths.slice(0, 6).map(m => ({
+            month: m,
+            paid: payments.filter(p => p.campaign_month === m && p.status === 'paid').reduce((s, p) => s + p.amount, 0),
+            pending: payments.filter(p => p.campaign_month === m && (p.status === 'pending' || p.status === 'unpaid')).reduce((s, p) => s + p.amount, 0),
+            reached: influencers.filter(i => {
+              const pay = payments.find(p => p.advertiser_id === i.id && p.campaign_month === m);
+              return pay && i.completed_videos >= i.target_videos;
+            }).length,
+          })),
+        },
+      });
+    }, 5000); // auto-save after 5s of data stability
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [influencers.length, payments.length, productDeliveries.length]);
 
   // Performance data
   const performanceData = influencers
-    .filter((i) => filterInfluencer === 'all' || i.id === filterInfluencer)
-    .map((i) => ({
+    .filter(i => filterInfluencer === 'all' || i.id === filterInfluencer)
+    .map(i => ({
       name: i.name.length > 12 ? i.name.substring(0, 12) + '...' : i.name,
       target: i.target_videos,
       completed: i.completed_videos,
     }));
 
-  // Delivery summary
   const deliveryByInfluencer = influencers
-    .filter((i) => filterInfluencer === 'all' || i.id === filterInfluencer)
-    .map((i) => {
-      const dels = productDeliveries.filter((d) => d.advertiser_id === i.id);
+    .filter(i => filterInfluencer === 'all' || i.id === filterInfluencer)
+    .map(i => {
+      const dels = productDeliveries.filter(d => d.advertiser_id === i.id);
       return {
-        name: i.name,
-        total: dels.length,
-        pending: dels.filter((d) => d.status === 'pending').length,
-        delivered: dels.filter((d) => d.status === 'sent').length,
-        returned: dels.filter((d) => d.status === 'returned').length,
+        name: i.name, total: dels.length,
+        pending: dels.filter(d => d.status === 'pending').length,
+        delivered: dels.filter(d => d.status === 'sent').length,
+        returned: dels.filter(d => d.status === 'returned').length,
         totalValue: dels.reduce((s, d) => s + d.price * d.quantity, 0),
       };
     });
 
-  // Payment summary
   const paymentByInfluencer = influencers
-    .filter((i) => filterInfluencer === 'all' || i.id === filterInfluencer)
-    .map((i) => {
-      const pays = payments.filter((p) => p.advertiser_id === i.id && (filterMonth === 'all' || p.campaign_month === filterMonth));
+    .filter(i => filterInfluencer === 'all' || i.id === filterInfluencer)
+    .map(i => {
+      const pays = payments.filter(p => p.advertiser_id === i.id && (filterMonth === 'all' || p.campaign_month === filterMonth));
       return {
         name: i.name,
         total: pays.reduce((s, p) => s + p.amount, 0),
-        paid: pays.filter((p) => p.status === 'paid').reduce((s, p) => s + p.amount, 0),
-        unpaid: pays.filter((p) => p.status === 'unpaid').reduce((s, p) => s + p.amount, 0),
+        paid: pays.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0),
+        pending: pays.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0),
+        suspended: pays.filter(p => p.status === 'suspended').reduce((s, p) => s + p.amount, 0),
       };
     });
 
-  const handleSaveMonthlyReport = () => {
-    if (!user) return;
-    const month = new Date().toISOString().slice(0, 7);
-    const reached = influencers.filter((i) => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
-    const unreached = influencers.filter((i) => i.completed_videos < i.target_videos && i.target_videos > 0).length;
-    const paidTotal = payments.filter((p) => p.status === 'paid' && (p.campaign_month === month || p.payment_date?.startsWith(month))).reduce((s, p) => s + p.amount, 0);
-    const pendingTotal = payments.filter((p) => p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
-
-    saveReport.mutate({
-      user_id: user.id,
-      report_month: month,
-      total_influencers: influencers.length,
-      active_influencers: influencers.filter((i) => i.is_active).length,
-      total_target_videos: influencers.reduce((s, i) => s + i.target_videos, 0),
-      total_completed_videos: influencers.reduce((s, i) => s + i.completed_videos, 0),
-      reached_target: reached,
-      unreached_target: unreached,
-      total_payments_made: paidTotal,
-      total_payments_pending: pendingTotal,
-      total_deliveries: productDeliveries.length,
-      report_data: {
-        influencers: influencers.map((i) => ({ name: i.name, target: i.target_videos, completed: i.completed_videos, status: i.completed_videos >= i.target_videos ? 'reached' : 'unreached' })),
-      },
+  // Suspended influencers
+  const suspendedInfluencers = useMemo(() => {
+    const month = filterMonth === 'all' ? new Date().toISOString().slice(0, 7) : filterMonth;
+    return influencers.filter(i => {
+      const pay = payments.find(p => p.advertiser_id === i.id && p.campaign_month === month);
+      return pay?.status === 'suspended';
     });
-  };
+  }, [influencers, payments, filterMonth]);
 
   const handleExportPerformance = () => {
-    downloadCSV(influencers.filter((i) => filterInfluencer === 'all' || i.id === filterInfluencer).map((i) => ({
+    downloadCSV(influencers.filter(i => filterInfluencer === 'all' || i.id === filterInfluencer).map(i => ({
       Influencer: i.name, Target: i.target_videos, Completed: i.completed_videos,
       Remaining: Math.max(0, i.target_videos - i.completed_videos),
       Status: i.completed_videos >= i.target_videos ? 'Reached' : 'Unreached',
@@ -110,15 +146,51 @@ export default function TikTokReports() {
   };
 
   const handleExportDelivery = () => {
-    downloadCSV(deliveryByInfluencer.map((d) => ({
+    downloadCSV(deliveryByInfluencer.map(d => ({
       Influencer: d.name, Total: d.total, Pending: d.pending, Delivered: d.delivered, Returned: d.returned, 'Total Value': d.totalValue,
     })), 'delivery-report');
   };
 
   const handleExportPayment = () => {
-    downloadCSV(paymentByInfluencer.map((p) => ({
-      Influencer: p.name, Total: p.total, Paid: p.paid, Unpaid: p.unpaid,
+    downloadCSV(paymentByInfluencer.map(p => ({
+      Influencer: p.name, Total: p.total, Paid: p.paid, Pending: p.pending, Suspended: p.suspended,
     })), 'payment-report');
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('TikTok Monthly Report', 14, 22);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+
+    const reached = influencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
+    const unreached = influencers.filter(i => i.completed_videos < i.target_videos && i.target_videos > 0).length;
+
+    autoTable(doc, {
+      startY: 38,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Influencers (Reached)', String(reached)],
+        ['Total Influencers (Unreached)', String(unreached)],
+        ['Total Deliveries', String(productDeliveries.length)],
+        ['Total Paid', `$${paymentByInfluencer.reduce((s, p) => s + p.paid, 0).toFixed(2)}`],
+        ['Total Pending', `$${paymentByInfluencer.reduce((s, p) => s + p.pending, 0).toFixed(2)}`],
+        ['Suspended Count', String(suspendedInfluencers.length)],
+      ],
+    });
+
+    if (suspendedInfluencers.length > 0) {
+      const y = (doc as any).lastAutoTable.finalY + 10;
+      doc.text('Suspended Influencers', 14, y);
+      autoTable(doc, {
+        startY: y + 4,
+        head: [['Name', 'Target', 'Completed']],
+        body: suspendedInfluencers.map(i => [i.name, String(i.target_videos), String(i.completed_videos)]),
+      });
+    }
+
+    doc.save('tiktok-monthly-report.pdf');
   };
 
   return (
@@ -131,28 +203,29 @@ export default function TikTokReports() {
               <SelectTrigger className="w-[160px]"><SelectValue placeholder="All Months" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Months</SelectItem>
-                {availableMonths.map((m) => <SelectItem key={m} value={m!}>{m}</SelectItem>)}
+                {availableMonths.map(m => <SelectItem key={m} value={m!}>{m}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filterInfluencer} onValueChange={setFilterInfluencer}>
               <SelectTrigger className="w-[200px]"><SelectValue placeholder="All Influencers" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Influencers</SelectItem>
-                {influencers.map((i) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                {influencers.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
               </SelectContent>
             </Select>
-            {canWrite && (
-              <Button variant="outline" onClick={handleSaveMonthlyReport}>
-                <Save className="h-4 w-4 mr-2" />Save Monthly Snapshot
-              </Button>
-            )}
+            <Button variant="outline" size="sm" onClick={handleExportPDF}><Download className="h-4 w-4 mr-2" />PDF Report</Button>
           </div>
         </div>
 
-        {/* Saved Monthly Reports */}
+        {/* Auto-saved Monthly Reports */}
         {reports.length > 0 && (
           <Card>
-            <CardHeader><CardTitle>Saved Monthly Reports</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Monthly Reports (Auto-Saved)</CardTitle>
+                <Badge variant="secondary">Auto-updated</Badge>
+              </div>
+            </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
@@ -165,10 +238,11 @@ export default function TikTokReports() {
                     <TableHead>Unreached</TableHead>
                     <TableHead>Paid</TableHead>
                     <TableHead>Pending</TableHead>
+                    <TableHead>Deliveries</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reports.map((r) => (
+                  {reports.map(r => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">{r.report_month}</TableCell>
                       <TableCell>{r.total_influencers} ({r.active_influencers} active)</TableCell>
@@ -178,10 +252,30 @@ export default function TikTokReports() {
                       <TableCell><Badge variant="destructive">{r.unreached_target}</Badge></TableCell>
                       <TableCell className="text-primary">${Number(r.total_payments_made).toFixed(2)}</TableCell>
                       <TableCell className="text-destructive">${Number(r.total_payments_pending).toFixed(2)}</TableCell>
+                      <TableCell>{r.total_deliveries}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Suspended Influencers */}
+        {suspendedInfluencers.length > 0 && (
+          <Card className="border-destructive/50">
+            <CardHeader>
+              <CardTitle className="text-destructive">Suspended Influencers ({suspendedInfluencers.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {suspendedInfluencers.map(i => (
+                  <div key={i.id} className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{i.name}</span>
+                    <span className="text-muted-foreground">{i.completed_videos}/{i.target_videos} videos</span>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -201,7 +295,7 @@ export default function TikTokReports() {
               <CardHeader><CardTitle>Target vs Completed Videos</CardTitle></CardHeader>
               <CardContent>
                 {performanceData.length > 0 ? (
-                  <ChartContainer config={{ target: { label: 'Target', color: 'hsl(var(--muted-foreground))' }, completed: { label: 'Completed', color: 'hsl(var(--primary))' } }} className="h-[300px]">
+                  <ChartContainer config={chartConfig} className="h-[300px]">
                     <BarChart data={performanceData}>
                       <XAxis dataKey="name" />
                       <YAxis allowDecimals={false} />
@@ -213,7 +307,6 @@ export default function TikTokReports() {
                 ) : <p className="text-center text-muted-foreground py-8">No data</p>}
               </CardContent>
             </Card>
-
             <Card>
               <CardContent className="p-0">
                 <Table>
@@ -227,7 +320,7 @@ export default function TikTokReports() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {influencers.filter((i) => filterInfluencer === 'all' || i.id === filterInfluencer).map((i) => (
+                    {influencers.filter(i => filterInfluencer === 'all' || i.id === filterInfluencer).map(i => (
                       <TableRow key={i.id}>
                         <TableCell className="font-medium">{i.name}</TableCell>
                         <TableCell>{i.target_videos}</TableCell>
@@ -264,7 +357,7 @@ export default function TikTokReports() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {deliveryByInfluencer.map((d) => (
+                    {deliveryByInfluencer.map(d => (
                       <TableRow key={d.name}>
                         <TableCell className="font-medium">{d.name}</TableCell>
                         <TableCell>{d.total}</TableCell>
@@ -295,20 +388,22 @@ export default function TikTokReports() {
                       <TableHead>Influencer</TableHead>
                       <TableHead>Total Amount</TableHead>
                       <TableHead>Paid</TableHead>
-                      <TableHead>Unpaid</TableHead>
+                      <TableHead>Pending</TableHead>
+                      <TableHead>Suspended</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paymentByInfluencer.map((p) => (
+                    {paymentByInfluencer.map(p => (
                       <TableRow key={p.name}>
                         <TableCell className="font-medium">{p.name}</TableCell>
                         <TableCell>${p.total.toFixed(2)}</TableCell>
                         <TableCell className="text-primary">${p.paid.toFixed(2)}</TableCell>
-                        <TableCell className="text-destructive">${p.unpaid.toFixed(2)}</TableCell>
+                        <TableCell className="text-destructive">${p.pending.toFixed(2)}</TableCell>
+                        <TableCell className="text-muted-foreground">${p.suspended.toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                     {paymentByInfluencer.length === 0 && (
-                      <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">No data</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No data</TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
