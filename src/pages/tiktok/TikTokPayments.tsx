@@ -44,15 +44,16 @@ export default function TikTokPayments() {
 
   const currentMonth = new Date().toISOString().slice(0, 7);
 
-  // Detect eligible influencers (reached target, no payment this month)
+  // Detect eligible influencers (active, reached target, no payment this month)
+  const activeInfluencers = influencers.filter(i => i.is_active);
   const eligibleCount = useMemo(() => {
     const existingThisMonth = payments.filter(p => p.campaign_month === currentMonth);
-    return influencers.filter(i =>
+    return activeInfluencers.filter(i =>
       i.completed_videos >= i.target_videos &&
       i.target_videos > 0 &&
       !existingThisMonth.some(p => p.advertiser_id === i.id)
     ).length;
-  }, [influencers, payments, currentMonth]);
+  }, [activeInfluencers, payments, currentMonth]);
 
   const availableMonths = useMemo(() => 
     [...new Set(payments.map(p => p.campaign_month).filter(Boolean))].sort().reverse()
@@ -96,7 +97,7 @@ export default function TikTokPayments() {
   };
 
   const handleAutoAdd = () => {
-    autoAddEligible.mutate(influencers.map(i => ({
+    autoAddEligible.mutate(activeInfluencers.map(i => ({
       id: i.id, name: i.name, target_videos: i.target_videos, completed_videos: i.completed_videos, salary: i.salary,
     })));
   };
@@ -117,8 +118,8 @@ export default function TikTokPayments() {
   const totalPaidThisMonth = monthPayments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
   const paidCount = monthPayments.filter(p => p.status === 'paid').length;
   const pendingAmount = payments.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
-  const totalTarget = influencers.filter(i => i.target_videos > 0).length;
-  const reachedTarget = influencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
+  const totalTarget = activeInfluencers.filter(i => i.target_videos > 0).length;
+  const reachedTarget = activeInfluencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
   const completionRate = totalTarget > 0 ? Math.round((reachedTarget / totalTarget) * 100) : 0;
 
   const handleExportCSV = () => {
@@ -169,7 +170,7 @@ export default function TikTokPayments() {
                       <Select value={form.advertiser_id} onValueChange={handleInfluencerSelect}>
                         <SelectTrigger><SelectValue placeholder="Select influencer" /></SelectTrigger>
                         <SelectContent>
-                          {influencers.filter(i => i.is_active).map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                          {activeInfluencers.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>

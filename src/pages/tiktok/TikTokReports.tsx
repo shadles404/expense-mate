@@ -45,9 +45,10 @@ export default function TikTokReports() {
   // Auto-save monthly report when data changes
   useEffect(() => {
     if (!user || !canWrite || influencers.length === 0) return;
+    const active = influencers.filter(i => i.is_active);
     const month = new Date().toISOString().slice(0, 7);
-    const reached = influencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
-    const unreached = influencers.filter(i => i.completed_videos < i.target_videos && i.target_videos > 0).length;
+    const reached = active.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
+    const unreached = active.filter(i => i.completed_videos < i.target_videos && i.target_videos > 0).length;
     const monthPayments = payments.filter(p => p.campaign_month === month || p.payment_date?.startsWith(month));
     const paidTotal = monthPayments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
     const pendingTotal = payments.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
@@ -62,9 +63,9 @@ export default function TikTokReports() {
         user_id: user.id,
         report_month: month,
         total_influencers: influencers.length,
-        active_influencers: influencers.filter(i => i.is_active).length,
-        total_target_videos: influencers.reduce((s, i) => s + i.target_videos, 0),
-        total_completed_videos: influencers.reduce((s, i) => s + i.completed_videos, 0),
+        active_influencers: active.length,
+        total_target_videos: active.reduce((s, i) => s + i.target_videos, 0),
+        total_completed_videos: active.reduce((s, i) => s + i.completed_videos, 0),
         reached_target: reached,
         unreached_target: unreached,
         total_payments_made: paidTotal,

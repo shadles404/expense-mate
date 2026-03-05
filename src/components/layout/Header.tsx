@@ -4,6 +4,9 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useModulePermissions, useTikTokSectionPermissions, TIKTOK_SECTION_KEYS } from '@/hooks/useModulePermissions';
+import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
+import { useContractNotifications } from '@/hooks/useContractNotifications';
+import { NotificationBell } from '@/components/tiktok/NotificationBell';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -50,12 +53,14 @@ export function Header() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const isTikTokActive = location.pathname.startsWith('/tiktok');
 
-  // For non-admins, filter main nav by module permissions
+  // Contract notifications
+  const { influencers } = useTikTokAdvertisers();
+  const { notifications } = useContractNotifications(influencers);
+
   const visibleNav = isAdmin
     ? navigation
     : navigation.filter(item => canAccess(item.moduleKey));
 
-  // TikTok sections visible to this user
   const visibleTikTokSections = isAdmin
     ? TIKTOK_SECTION_KEYS
     : TIKTOK_SECTION_KEYS.filter(s => canAccessSection(s.key));
@@ -94,7 +99,6 @@ export function Header() {
                 );
               })}
 
-              {/* TikTok Module Dropdown */}
               {showTikTok && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -129,56 +133,61 @@ export function Header() {
             </nav>
           </div>
 
-          {user && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <User className="h-4 w-4" />
-                  </div>
-                  <span className="hidden sm:inline text-sm font-medium">
-                    {user.email?.split('@')[0]}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="flex flex-col">
-                    <span className="font-medium">Account</span>
-                    <span className="text-xs text-muted-foreground">{user.email}</span>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {isAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin/settings" className="flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Admin Settings
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
-                  <DialogTrigger asChild>
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                      <Tags className="mr-2 h-4 w-4" />
-                      Manage Categories
+          <div className="flex items-center gap-2">
+            {/* Notification Bell */}
+            {showTikTok && <NotificationBell notifications={notifications} />}
+
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <User className="h-4 w-4" />
+                    </div>
+                    <span className="hidden sm:inline text-sm font-medium">
+                      {user.email?.split('@')[0]}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col">
+                      <span className="font-medium">Account</span>
+                      <span className="text-xs text-muted-foreground">{user.email}</span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {isAdmin && (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin/settings" className="flex items-center">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Admin Settings
+                      </Link>
                     </DropdownMenuItem>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Manage Expense Categories</DialogTitle>
-                    </DialogHeader>
-                    <CategoryManager />
-                  </DialogContent>
-                </Dialog>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()} className="text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                  )}
+                  <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+                    <DialogTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <Tags className="mr-2 h-4 w-4" />
+                        Manage Categories
+                      </DropdownMenuItem>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle>Manage Expense Categories</DialogTitle>
+                      </DialogHeader>
+                      <CategoryManager />
+                    </DialogContent>
+                  </Dialog>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut()} className="text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
       </div>
 
