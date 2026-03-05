@@ -4,14 +4,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokDeliveries } from '@/hooks/useTikTokDeliveries';
 import { useTikTokPayments } from '@/hooks/useTikTokPayments';
+import { useTikTokTrackingHistory } from '@/hooks/useTikTokTrackingHistory';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
-import { Search, CheckCircle, XCircle, Video, Download } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Search, CheckCircle, XCircle, Video, Download, RotateCcw } from 'lucide-react';
 import { downloadCSV } from '@/lib/csvExport';
 import { toast } from '@/hooks/use-toast';
 
@@ -19,12 +20,15 @@ export default function TikTokTracking() {
   const { influencers, updateInfluencer } = useTikTokAdvertisers();
   const { deliveries } = useTikTokDeliveries();
   const { createPayment } = useTikTokPayments();
+  const { history, archiveAndReset } = useTikTokTrackingHistory();
   const { canWriteSection } = useTikTokSectionPermissions();
+  const { isAdmin } = useUserRole();
   const canWrite = canWriteSection('tiktok_tracking');
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  // Only show ACTIVE influencers in tracking
   const activeInfluencers = influencers.filter((i) => i.is_active);
 
   const filtered = activeInfluencers.filter((i) => {
@@ -46,11 +50,10 @@ export default function TikTokTracking() {
         campaign_month: currentMonth,
         total_target_videos: i.target_videos,
         completed_videos: newCompleted,
-        status: 'paid',
-        payment_date: new Date().toISOString().split('T')[0],
-        notes: 'Auto-confirmed: target videos completed',
+        status: 'pending',
+        notes: 'Auto-added: target videos completed',
       });
-      toast({ title: 'Target reached!', description: `Payment auto-confirmed for ${i.name}` });
+      toast({ title: 'Target reached!', description: `${i.name} auto-added to Payment Confirmation as Pending` });
     }
   };
 
@@ -59,6 +62,16 @@ export default function TikTokTracking() {
       updateInfluencer.mutate({ id: i.id, completed_videos: i.completed_videos - 1 });
     }
   };
+
+  const handleMonthlyReset = () => {
+    if (!confirm('This will archive current tracking data and reset all completed counts to 0. Continue?')) return;
+    archiveAndReset.mutate(
+      activeInfluencers.map(i => ({ id: i.id, target_videos: i.target_videos, completed_videos: i.completed_videos }))
+    );
+  };
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonthName = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
 
   const handleExportCSV = () => {
     downloadCSV(filtered.map((i) => ({
@@ -75,11 +88,23 @@ export default function TikTokTracking() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-foreground">Target Video Tracking</h1>
-          <Button variant="outline" onClick={handleExportCSV} disabled={filtered.length === 0}>
-            <Download className="h-4 w-4 mr-2" />CSV
-          </Button>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Target Video Tracking</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Tracking period: {currentMonthName} · Active influencers only
+            </p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={handleExportCSV} disabled={filtered.length === 0}>
+              <Download className="h-4 w-4 mr-2" />CSV
+            </Button>
+            {isAdmin && canWrite && (
+              <Button variant="destructive" onClick={handleMonthlyReset} disabled={archiveAndReset.isPending}>
+                <RotateCcw className="h-4 w-4 mr-2" />Monthly Reset
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -96,6 +121,27 @@ export default function TikTokTracking() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Tracking History Summary */}
+        {history.length > 0 && (
+          <Card>
+            <CardContent className="p-4">
+              <h3 className="text-sm font-semibold mb-2">Recent History</h3>
+              <div className="flex gap-4 overflow-x-auto text-xs">
+                {[...new Set(history.map(h => h.tracking_month))].slice(0, 3).map(month => {
+                  const monthRecords = history.filter(h => h.tracking_month === month);
+                  const reached = monthRecords.filter(h => h.reached_target).length;
+                  return (
+                    <div key={month} className="flex-shrink-0 p-2 rounded bg-muted/50 min-w-[120px]">
+                      <p className="font-medium">{month}</p>
+                      <p className="text-muted-foreground">{reached}/{monthRecords.length} reached</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-4">
           {filtered.map((i) => {
@@ -149,7 +195,7 @@ export default function TikTokTracking() {
             );
           })}
           {filtered.length === 0 && (
-            <Card><CardContent className="py-12 text-center text-muted-foreground">No influencers found</CardContent></Card>
+            <Card><CardContent className="py-12 text-center text-muted-foreground">No active influencers found</CardContent></Card>
           )}
         </div>
       </div>

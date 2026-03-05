@@ -11,7 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
-import { Plus, Pencil, Trash2, Search, Download } from 'lucide-react';
+import { useContractNotifications } from '@/hooks/useContractNotifications';
+import { InfluencerProfileDialog } from '@/components/tiktok/InfluencerProfileDialog';
+import { ContractAlerts } from '@/components/tiktok/ContractAlerts';
+import { Plus, Pencil, Trash2, Search, Download, Eye } from 'lucide-react';
 import { downloadCSV } from '@/lib/csvExport';
 import type { TikTokInfluencer } from '@/types/tiktok';
 
@@ -19,9 +22,12 @@ export default function TikTokInfluencers() {
   const { influencers, isLoading, createInfluencer, updateInfluencer, deleteInfluencer } = useTikTokAdvertisers();
   const { canWriteSection } = useTikTokSectionPermissions();
   const canWrite = canWriteSection('tiktok_influencers');
+  const { notifications } = useContractNotifications(influencers);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TikTokInfluencer | null>(null);
+  const [profileInfluencer, setProfileInfluencer] = useState<TikTokInfluencer | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
     name: '', phone: '', tiktok_username: '', category: '', target_videos: 0,
@@ -42,6 +48,11 @@ export default function TikTokInfluencers() {
       notes: i.notes || '', is_active: i.is_active,
     });
     setDialogOpen(true);
+  };
+
+  const openProfile = (i: TikTokInfluencer) => {
+    setProfileInfluencer(i);
+    setProfileOpen(true);
   };
 
   const handleSubmit = () => {
@@ -71,6 +82,8 @@ export default function TikTokInfluencers() {
       Username: i.tiktok_username || '',
       Phone: i.phone || '',
       Category: i.category || '',
+      Platform: i.platform || 'TikTok',
+      'Contract Type': i.contract_type || 'Freelance',
       'Target Videos': i.target_videos,
       'Completed Videos': i.completed_videos,
       Salary: i.salary,
@@ -134,6 +147,9 @@ export default function TikTokInfluencers() {
           </div>
         </div>
 
+        {/* Contract Alerts */}
+        {notifications.length > 0 && <ContractAlerts notifications={notifications} />}
+
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search influencers..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
@@ -147,10 +163,11 @@ export default function TikTokInfluencers() {
                   <TableHead>Name</TableHead>
                   <TableHead>Username</TableHead>
                   <TableHead>Category</TableHead>
+                  <TableHead>Platform</TableHead>
                   <TableHead>Target</TableHead>
                   <TableHead>Completed</TableHead>
                   <TableHead>Status</TableHead>
-                  {canWrite && <TableHead className="text-right">Actions</TableHead>}
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -159,6 +176,7 @@ export default function TikTokInfluencers() {
                     <TableCell className="font-medium">{i.name}</TableCell>
                     <TableCell>{i.tiktok_username || '—'}</TableCell>
                     <TableCell>{i.category || '—'}</TableCell>
+                    <TableCell>{i.platform || 'TikTok'}</TableCell>
                     <TableCell>{i.target_videos}</TableCell>
                     <TableCell>{i.completed_videos}</TableCell>
                     <TableCell>
@@ -166,21 +184,26 @@ export default function TikTokInfluencers() {
                         {i.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
-                    {canWrite && (
-                      <TableCell className="text-right space-x-1">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(i)}><Pencil className="h-4 w-4" /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => deleteInfluencer.mutate(i.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </TableCell>
-                    )}
+                    <TableCell className="text-right space-x-1">
+                      <Button size="icon" variant="ghost" onClick={() => openProfile(i)}><Eye className="h-4 w-4" /></Button>
+                      {canWrite && (
+                        <>
+                          <Button size="icon" variant="ghost" onClick={() => openEdit(i)}><Pencil className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" onClick={() => deleteInfluencer.mutate(i.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                        </>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={canWrite ? 7 : 6} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No influencers found'}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No influencers found'}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
+
+        <InfluencerProfileDialog influencer={profileInfluencer} open={profileOpen} onOpenChange={setProfileOpen} />
       </div>
     </Layout>
   );

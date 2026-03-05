@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokProductDeliveries } from '@/hooks/useTikTokProductDeliveries';
 import { useTikTokPayments } from '@/hooks/useTikTokPayments';
-import { Users, Video, Package, DollarSign, TrendingUp, TrendingDown, Wallet, Clock, Download, Percent } from 'lucide-react';
+import { useContractNotifications } from '@/hooks/useContractNotifications';
+import { ContractAlerts } from '@/components/tiktok/ContractAlerts';
+import { Users, Video, Package, DollarSign, TrendingUp, TrendingDown, Wallet, Clock, Download, Percent, AlertTriangle, UserX, UserCheck } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +22,7 @@ export default function TikTokDashboard() {
   const { influencers } = useTikTokAdvertisers();
   const { productDeliveries } = useTikTokProductDeliveries();
   const { payments } = useTikTokPayments();
+  const { notifications, expiringCount } = useContractNotifications(influencers);
 
   const [filterMonth, setFilterMonth] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -30,29 +33,31 @@ export default function TikTokDashboard() {
 
   const currentMonth = new Date().toISOString().slice(0, 7);
 
-  // Filtered payments
   const filteredPayments = useMemo(() => payments.filter(p => {
     const matchMonth = filterMonth === 'all' || p.campaign_month === filterMonth;
     const matchStatus = filterStatus === 'all' || p.status === filterStatus;
     return matchMonth && matchStatus;
   }), [payments, filterMonth, filterStatus]);
 
+  // Only active influencers for stats
+  const active = influencers.filter(i => i.is_active);
   const totalInfluencers = influencers.length;
-  const activeInfluencers = influencers.filter(i => i.is_active).length;
+  const activeInfluencers = active.length;
   const inactiveInfluencers = totalInfluencers - activeInfluencers;
-  const totalTargetVideos = influencers.reduce((s, i) => s + i.target_videos, 0);
-  const totalCompletedVideos = influencers.reduce((s, i) => s + i.completed_videos, 0);
+  const totalTargetVideos = active.reduce((s, i) => s + i.target_videos, 0);
+  const totalCompletedVideos = active.reduce((s, i) => s + i.completed_videos, 0);
   const deliveredProducts = productDeliveries.filter(d => d.status === 'sent').length;
   const pendingProducts = productDeliveries.filter(d => d.status === 'pending').length;
-  const reachedTarget = influencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
-  const unreachedTarget = influencers.filter(i => i.completed_videos < i.target_videos && i.target_videos > 0).length;
-  const totalWithTarget = influencers.filter(i => i.target_videos > 0).length;
+  const reachedTarget = active.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
+  const unreachedTarget = active.filter(i => i.completed_videos < i.target_videos && i.target_videos > 0).length;
+  const totalWithTarget = active.filter(i => i.target_videos > 0).length;
   const completionRate = totalWithTarget > 0 ? Math.round((reachedTarget / totalWithTarget) * 100) : 0;
 
   // Financial stats
   const totalPaid = filteredPayments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
   const totalPending = filteredPayments.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
   const suspendedCount = filteredPayments.filter(p => p.status === 'suspended').length;
+  const suspendedAmount = filteredPayments.filter(p => p.status === 'suspended').reduce((s, p) => s + p.amount, 0);
   const monthlyPaid = payments.filter(p => p.status === 'paid' && p.campaign_month === currentMonth).reduce((s, p) => s + p.amount, 0);
   const paidThisMonthCount = payments.filter(p => p.status === 'paid' && p.campaign_month === currentMonth).length;
 
@@ -69,11 +74,6 @@ export default function TikTokDashboard() {
   const performanceData = [
     { name: 'Reached', value: reachedTarget },
     { name: 'Unreached', value: unreachedTarget },
-  ];
-
-  const statusData = [
-    { name: 'Active', count: activeInfluencers },
-    { name: 'Inactive', count: inactiveInfluencers },
   ];
 
   const chartConfig = {
@@ -99,24 +99,21 @@ export default function TikTokDashboard() {
     doc.text('TikTok Dashboard Report', 14, 22);
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
-
-    // KPIs
-    doc.setFontSize(12);
-    doc.text('Key Metrics', 14, 42);
     autoTable(doc, {
       startY: 46,
       head: [['Metric', 'Value']],
       body: [
         ['Total Influencers', String(totalInfluencers)],
+        ['Active Influencers', String(activeInfluencers)],
+        ['Inactive Influencers', String(inactiveInfluencers)],
+        ['Contracts Expiring Soon', String(expiringCount)],
         ['Target Completion Rate', `${completionRate}%`],
         ['Total Paid', `$${totalPaid.toFixed(2)}`],
         ['Pending Payments', `$${totalPending.toFixed(2)}`],
-        ['Suspended', String(suspendedCount)],
+        ['Suspended Payments', `$${suspendedAmount.toFixed(2)} (${suspendedCount})`],
         ['This Month Paid', `$${monthlyPaid.toFixed(2)}`],
       ],
     });
-
-    // Payment details
     const finalY = (doc as any).lastAutoTable.finalY + 10;
     doc.text('Payment Details', 14, finalY);
     autoTable(doc, {
@@ -129,22 +126,8 @@ export default function TikTokDashboard() {
         p.status,
       ]),
     });
-
     doc.save('tiktok-dashboard-report.pdf');
   };
-
-  const stats = [
-    { title: 'Total Influencers', value: totalInfluencers, icon: Users, sub: `${activeInfluencers} active / ${inactiveInfluencers} inactive` },
-    { title: 'Target Videos', value: `${totalCompletedVideos} / ${totalTargetVideos}`, icon: Video, sub: `${totalTargetVideos - totalCompletedVideos} remaining` },
-    { title: 'Product Deliveries', value: productDeliveries.length, icon: Package, sub: `${deliveredProducts} delivered / ${pendingProducts} pending` },
-    { title: 'Completion Rate', value: `${completionRate}%`, icon: Percent, sub: `${reachedTarget}/${totalWithTarget} reached target` },
-  ];
-
-  const financialStats = [
-    { title: 'Total Paid', value: `$${totalPaid.toFixed(2)}`, icon: Wallet, sub: `${paidThisMonthCount} paid this month` },
-    { title: 'Pending Payments', value: `$${totalPending.toFixed(2)}`, icon: Clock, sub: `${suspendedCount} suspended` },
-    { title: 'This Month', value: `$${monthlyPaid.toFixed(2)}`, icon: DollarSign, sub: `Payments in ${currentMonth}` },
-  ];
 
   return (
     <Layout>
@@ -173,38 +156,139 @@ export default function TikTokDashboard() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map(s => (
-            <Card key={s.title}>
+        {/* Contract Expiry Alerts */}
+        {notifications.length > 0 && <ContractAlerts notifications={notifications} />}
+
+        {/* Influencer Overview */}
+        <div>
+          <h2 className="text-lg font-semibold mb-3">Influencer Overview</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{s.title}</CardTitle>
-                <s.icon className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Influencers</CardTitle>
+                <Users className="h-5 w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{s.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
+                <div className="text-2xl font-bold">{totalInfluencers}</div>
+                <p className="text-xs text-muted-foreground mt-1">{activeInfluencers} active / {inactiveInfluencers} inactive</p>
               </CardContent>
             </Card>
-          ))}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Active Influencers</CardTitle>
+                <UserCheck className="h-5 w-5 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">{activeInfluencers}</div>
+                <p className="text-xs text-muted-foreground mt-1">Contributing to campaigns</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Inactive Influencers</CardTitle>
+                <UserX className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{inactiveInfluencers}</div>
+                <p className="text-xs text-muted-foreground mt-1">Excluded from tracking</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Contracts Expiring</CardTitle>
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{expiringCount}</div>
+                <p className="text-xs text-muted-foreground mt-1">Within 30 days</p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
+        {/* Payment Overview */}
+        <div>
+          <h2 className="text-lg font-semibold mb-3">Payment Overview</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Paid This Month</CardTitle>
+                <DollarSign className="h-5 w-5 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">${monthlyPaid.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground mt-1">{paidThisMonthCount} influencers</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Paid Influencers</CardTitle>
+                <UserCheck className="h-5 w-5 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{paidThisMonthCount}</div>
+                <p className="text-xs text-muted-foreground mt-1">This month ({currentMonth})</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Pending Payments</CardTitle>
+                <Clock className="h-5 w-5 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">${totalPending.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground mt-1">{filteredPayments.filter(p => p.status === 'pending' || p.status === 'unpaid').length} payments</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Suspended Payments</CardTitle>
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${suspendedAmount.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground mt-1">{suspendedCount} suspended</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Target Completion */}
         <div className="grid gap-4 md:grid-cols-3">
-          {financialStats.map(s => (
-            <Card key={s.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{s.title}</CardTitle>
-                <s.icon className="h-5 w-5 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-primary">{s.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
-              </CardContent>
-            </Card>
-          ))}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Target Videos</CardTitle>
+              <Video className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalCompletedVideos} / {totalTargetVideos}</div>
+              <p className="text-xs text-muted-foreground mt-1">{totalTargetVideos - totalCompletedVideos} remaining (active only)</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Completion Rate</CardTitle>
+              <Percent className="h-5 w-5 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{completionRate}%</div>
+              <p className="text-xs text-muted-foreground mt-1">{reachedTarget}/{totalWithTarget} reached target</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Product Deliveries</CardTitle>
+              <Package className="h-5 w-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{productDeliveries.length}</div>
+              <p className="text-xs text-muted-foreground mt-1">{deliveredProducts} delivered / {pendingProducts} pending</p>
+            </CardContent>
+          </Card>
         </div>
 
+        {/* Charts */}
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Monthly Payment Trend */}
           <Card>
             <CardHeader><CardTitle className="text-lg">Monthly Payment Trend</CardTitle></CardHeader>
             <CardContent>
@@ -224,9 +308,8 @@ export default function TikTokDashboard() {
             </CardContent>
           </Card>
 
-          {/* Target Performance Pie */}
           <Card>
-            <CardHeader><CardTitle className="text-lg">Target Performance</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-lg">Influencer Performance</CardTitle></CardHeader>
             <CardContent>
               {performanceData.some(d => d.value > 0) ? (
                 <ChartContainer config={chartConfig} className="h-[250px]">
@@ -246,6 +329,7 @@ export default function TikTokDashboard() {
           </Card>
         </div>
 
+        {/* Top/Bottom Performers (active only) */}
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
@@ -254,7 +338,7 @@ export default function TikTokDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {influencers
+                {active
                   .filter(i => i.target_videos > 0)
                   .sort((a, b) => (b.completed_videos / b.target_videos) - (a.completed_videos / a.target_videos))
                   .slice(0, 5)
@@ -267,7 +351,7 @@ export default function TikTokDashboard() {
                       </div>
                     </div>
                   ))}
-                {influencers.length === 0 && <p className="text-sm text-muted-foreground">No influencers registered</p>}
+                {active.length === 0 && <p className="text-sm text-muted-foreground">No active influencers</p>}
               </div>
             </CardContent>
           </Card>
@@ -279,7 +363,7 @@ export default function TikTokDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {influencers
+                {active
                   .filter(i => i.target_videos > 0 && i.completed_videos < i.target_videos)
                   .sort((a, b) => (a.completed_videos / a.target_videos) - (b.completed_videos / b.target_videos))
                   .slice(0, 5)
@@ -289,28 +373,13 @@ export default function TikTokDashboard() {
                       <span className="text-sm text-destructive">{i.target_videos - i.completed_videos} remaining</span>
                     </div>
                   ))}
-                {influencers.filter(i => i.completed_videos < i.target_videos).length === 0 && (
+                {active.filter(i => i.completed_videos < i.target_videos).length === 0 && (
                   <p className="text-sm text-muted-foreground">All targets met!</p>
                 )}
               </div>
             </CardContent>
           </Card>
         </div>
-
-        {/* Influencer Status */}
-        <Card>
-          <CardHeader><CardTitle className="text-lg">Influencer Status</CardTitle></CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[250px]">
-              <BarChart data={statusData}>
-                <XAxis dataKey="name" />
-                <YAxis allowDecimals={false} />
-                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
       </div>
     </Layout>
   );

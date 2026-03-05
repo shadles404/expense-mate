@@ -833,6 +833,47 @@ export type Database = {
         }
         Relationships: []
       }
+      tiktok_tracking_history: {
+        Row: {
+          advertiser_id: string
+          completed_videos: number
+          created_at: string
+          id: string
+          reached_target: boolean
+          target_videos: number
+          tracking_month: string
+          user_id: string
+        }
+        Insert: {
+          advertiser_id: string
+          completed_videos?: number
+          created_at?: string
+          id?: string
+          reached_target?: boolean
+          target_videos?: number
+          tracking_month: string
+          user_id: string
+        }
+        Update: {
+          advertiser_id?: string
+          completed_videos?: number
+          created_at?: string
+          id?: string
+          reached_target?: boolean
+          target_videos?: number
+          tracking_month?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_tracking_history_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "tiktok_advertisers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

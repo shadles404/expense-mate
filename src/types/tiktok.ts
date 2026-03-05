@@ -13,6 +13,9 @@ export interface TikTokInfluencer {
   agreement_end_date: string | null;
   notes: string | null;
   targets_locked: boolean;
+  platform: string;
+  contract_type: string;
+  ad_types: string[];
   created_at: string;
   updated_at: string;
 }
