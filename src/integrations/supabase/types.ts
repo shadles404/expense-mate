@@ -646,6 +646,53 @@ export type Database = {
         }
         Relationships: []
       }
+      tiktok_payment_history: {
+        Row: {
+          advertiser_id: string
+          campaign_month: string
+          completed_videos: number
+          created_at: string
+          id: string
+          payment_amount: number
+          payment_date: string | null
+          payment_status: string
+          target_videos: number
+          user_id: string
+        }
+        Insert: {
+          advertiser_id: string
+          campaign_month: string
+          completed_videos?: number
+          created_at?: string
+          id?: string
+          payment_amount?: number
+          payment_date?: string | null
+          payment_status?: string
+          target_videos?: number
+          user_id: string
+        }
+        Update: {
+          advertiser_id?: string
+          campaign_month?: string
+          completed_videos?: number
+          created_at?: string
+          id?: string
+          payment_amount?: number
+          payment_date?: string | null
+          payment_status?: string
+          target_videos?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_payment_history_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "tiktok_advertisers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tiktok_payments: {
         Row: {
           advertiser_id: string
@@ -717,6 +764,7 @@ export type Database = {
           delivery_person: string | null
           id: string
           notes: string | null
+          payment_status: string
           price: number
           product_name: string
           quantity: number
@@ -732,6 +780,7 @@ export type Database = {
           delivery_person?: string | null
           id?: string
           notes?: string | null
+          payment_status?: string
           price?: number
           product_name: string
           quantity?: number
@@ -747,6 +796,7 @@ export type Database = {
           delivery_person?: string | null
           id?: string
           notes?: string | null
+          payment_status?: string
           price?: number
           product_name?: string
           quantity?: number
