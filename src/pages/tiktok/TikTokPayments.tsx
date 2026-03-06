@@ -29,6 +29,7 @@ const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive' | 'o
 export default function TikTokPayments() {
   const { payments, auditLogs, isLoading, createPayment, updatePaymentStatus, autoAddEligible } = useTikTokPayments();
   const { influencers } = useTikTokAdvertisers();
+  const { archivePayments } = useTikTokPaymentHistory();
   const { isAdmin } = useUserRole();
   const { canWriteSection } = useTikTokSectionPermissions();
   const canWrite = canWriteSection('tiktok_payments');
