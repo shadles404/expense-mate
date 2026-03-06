@@ -12,7 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { useTikTokProductDeliveries } from '@/hooks/useTikTokProductDeliveries';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
-import { Plus, Search, Pencil, Download } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Plus, Search, Pencil, Download, DollarSign, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { downloadCSV } from '@/lib/csvExport';
 import type { TikTokProductDelivery } from '@/types/tiktok';
@@ -21,10 +22,15 @@ const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive'> = {
   pending: 'secondary', sent: 'default', returned: 'destructive',
 };
 
+const PAYMENT_STATUS_COLORS: Record<string, 'default' | 'secondary'> = {
+  paid: 'default', unpaid: 'secondary',
+};
+
 export default function TikTokDelivery() {
   const { productDeliveries, isLoading, createProductDelivery, updateProductDelivery } = useTikTokProductDeliveries();
   const { influencers } = useTikTokAdvertisers();
   const { canWriteSection } = useTikTokSectionPermissions();
+  const { isAdmin } = useUserRole();
   const canWrite = canWriteSection('tiktok_delivery');
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -37,11 +43,11 @@ export default function TikTokDelivery() {
 
   const [form, setForm] = useState({
     advertiser_id: '', product_name: '', quantity: 1, date_sent: new Date().toISOString().split('T')[0],
-    status: 'pending' as 'pending' | 'sent' | 'returned', price: 0, notes: '',
+    status: 'pending' as 'pending' | 'sent' | 'returned', price: 0, notes: '', payment_status: 'unpaid' as 'paid' | 'unpaid',
   });
 
   const resetForm = () => {
-    setForm({ advertiser_id: '', product_name: '', quantity: 1, date_sent: new Date().toISOString().split('T')[0], status: 'pending', price: 0, notes: '' });
+    setForm({ advertiser_id: '', product_name: '', quantity: 1, date_sent: new Date().toISOString().split('T')[0], status: 'pending', price: 0, notes: '', payment_status: 'unpaid' });
     setEditing(null);
   };
 
@@ -50,6 +56,7 @@ export default function TikTokDelivery() {
     setForm({
       advertiser_id: d.advertiser_id, product_name: d.product_name, quantity: d.quantity,
       date_sent: d.date_sent, status: d.status, price: d.price, notes: d.notes || '',
+      payment_status: (d as any).payment_status || 'unpaid',
     });
     setDialogOpen(true);
   };
@@ -58,6 +65,7 @@ export default function TikTokDelivery() {
     const payload = {
       advertiser_id: form.advertiser_id, product_name: form.product_name, quantity: form.quantity,
       date_sent: form.date_sent, status: form.status, price: form.price, notes: form.notes || null,
+      payment_status: form.payment_status,
     };
     if (editing) {
       updateProductDelivery.mutate({ id: editing.id, ...payload });
@@ -78,6 +86,12 @@ export default function TikTokDelivery() {
     return matchSearch && matchInfluencer && matchStatus && matchDateFrom && matchDateTo;
   });
 
+  // Payment status summary
+  const paidDeliveries = filtered.filter(d => (d as any).payment_status === 'paid');
+  const unpaidDeliveries = filtered.filter(d => (d as any).payment_status !== 'paid');
+  const totalPaidAmount = paidDeliveries.reduce((sum, d) => sum + d.price * d.quantity, 0);
+  const totalPendingAmount = unpaidDeliveries.reduce((sum, d) => sum + d.price * d.quantity, 0);
+
   const handleExportCSV = () => {
     downloadCSV(filtered.map((d) => ({
       Influencer: d.advertiser?.name || '',
@@ -86,6 +100,7 @@ export default function TikTokDelivery() {
       Date: d.date_sent,
       Price: d.price,
       Status: d.status,
+      'Payment Status': (d as any).payment_status || 'unpaid',
       Notes: d.notes || '',
     })), 'delivery-records');
   };
@@ -124,16 +139,30 @@ export default function TikTokDelivery() {
                       <div><Label>Date Sent</Label><Input type="date" value={form.date_sent} onChange={(e) => setForm({ ...form, date_sent: e.target.value })} /></div>
                       <div><Label>Price</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} /></div>
                     </div>
-                    <div>
-                      <Label>Status</Label>
-                      <Select value={form.status} onValueChange={(v: any) => setForm({ ...form, status: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="sent">Delivered</SelectItem>
-                          <SelectItem value="returned">Returned</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Status</Label>
+                        <Select value={form.status} onValueChange={(v: any) => setForm({ ...form, status: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="sent">Delivered</SelectItem>
+                            <SelectItem value="returned">Returned</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {(isAdmin || editing) && (
+                        <div>
+                          <Label>Payment Status</Label>
+                          <Select value={form.payment_status} onValueChange={(v: any) => setForm({ ...form, payment_status: v })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="unpaid">Unpaid</SelectItem>
+                              <SelectItem value="paid">Paid</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                     <div><Label>Notes</Label><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
                     <Button onClick={handleSubmit} disabled={!form.advertiser_id || !form.product_name} className="w-full">{editing ? 'Update' : 'Register'}</Button>
@@ -144,27 +173,36 @@ export default function TikTokDelivery() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Payment Summary Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4 flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Total Records</span>
-              <span className="text-2xl font-bold text-foreground">{filtered.length}</span>
+              <span className="text-xs text-muted-foreground">Paid Deliveries</span>
+              <span className="text-2xl font-bold text-primary">{paidDeliveries.length}</span>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Total Price</span>
-              <span className="text-2xl font-bold text-foreground">
-                ${filtered.reduce((sum, d) => sum + d.price * d.quantity, 0).toFixed(2)}
-              </span>
+              <span className="text-xs text-muted-foreground">Unpaid Deliveries</span>
+              <span className="text-2xl font-bold text-destructive">{unpaidDeliveries.length}</span>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">Total Items</span>
-              <span className="text-2xl font-bold text-foreground">
-                {filtered.reduce((sum, d) => sum + d.quantity, 0)}
-              </span>
+              <div className="flex items-center gap-1">
+                <DollarSign className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Total Paid</span>
+              </div>
+              <span className="text-2xl font-bold text-primary">${totalPaidAmount.toFixed(2)}</span>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex flex-col gap-1">
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Pending Amount</span>
+              </div>
+              <span className="text-2xl font-bold text-destructive">${totalPendingAmount.toFixed(2)}</span>
             </CardContent>
           </Card>
         </div>
@@ -205,6 +243,7 @@ export default function TikTokDelivery() {
                   <TableHead>Date</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Payment</TableHead>
                   {canWrite && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -217,6 +256,11 @@ export default function TikTokDelivery() {
                     <TableCell>{format(new Date(d.date_sent), 'MMM dd, yyyy')}</TableCell>
                     <TableCell>${d.price.toFixed(2)}</TableCell>
                     <TableCell><Badge variant={STATUS_COLORS[d.status]}>{d.status}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant={PAYMENT_STATUS_COLORS[(d as any).payment_status] || 'secondary'}>
+                        {(d as any).payment_status || 'unpaid'}
+                      </Badge>
+                    </TableCell>
                     {canWrite && (
                       <TableCell className="text-right">
                         <Button size="icon" variant="ghost" onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></Button>
@@ -225,7 +269,7 @@ export default function TikTokDelivery() {
                   </TableRow>
                 ))}
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={canWrite ? 7 : 6} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No deliveries found'}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={canWrite ? 8 : 7} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No deliveries found'}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

@@ -11,9 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useTikTokPayments } from '@/hooks/useTikTokPayments';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
+import { useTikTokPaymentHistory } from '@/hooks/useTikTokPaymentHistory';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
-import { Plus, Search, Download, Zap, Users, DollarSign, Clock, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Download, Zap, Users, DollarSign, Clock, AlertTriangle, Archive } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { downloadCSV } from '@/lib/csvExport';
@@ -28,6 +29,7 @@ const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive' | 'o
 export default function TikTokPayments() {
   const { payments, auditLogs, isLoading, createPayment, updatePaymentStatus, autoAddEligible } = useTikTokPayments();
   const { influencers } = useTikTokAdvertisers();
+  const { archivePayments } = useTikTokPaymentHistory();
   const { isAdmin } = useUserRole();
   const { canWriteSection } = useTikTokSectionPermissions();
   const canWrite = canWriteSection('tiktok_payments');
@@ -152,6 +154,22 @@ export default function TikTokPayments() {
             <Button variant="outline" onClick={handleExportCSV} disabled={filtered.length === 0}>
               <Download className="h-4 w-4 mr-2" />CSV
             </Button>
+            {isAdmin && payments.length > 0 && (
+              <Button variant="outline" onClick={() => {
+                if (!confirm('Archive all current payments to history? This preserves records and clears the current list for the new month.')) return;
+                archivePayments.mutate(payments.map(p => ({
+                  advertiser_id: p.advertiser_id,
+                  campaign_month: p.campaign_month || '',
+                  total_target_videos: p.total_target_videos,
+                  completed_videos: p.completed_videos,
+                  amount: p.amount,
+                  status: p.status,
+                  payment_date: p.payment_date,
+                })));
+              }} disabled={archivePayments.isPending}>
+                <Archive className="h-4 w-4 mr-2" />Archive & Reset
+              </Button>
+            )}
             {canWrite && eligibleCount > 0 && (
               <Button variant="secondary" onClick={handleAutoAdd} disabled={autoAddEligible.isPending}>
                 <Zap className="h-4 w-4 mr-2" />Auto-Add {eligibleCount} Eligible

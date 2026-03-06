@@ -47,6 +47,7 @@ export interface TikTokProductDelivery {
   company_name: string | null;
   delivery_person: string | null;
   notes: string | null;
+  payment_status: 'paid' | 'unpaid';
   created_at: string;
   updated_at: string;
   advertiser?: TikTokInfluencer;

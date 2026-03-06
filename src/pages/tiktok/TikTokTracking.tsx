@@ -27,8 +27,8 @@ export default function TikTokTracking() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [editingValues, setEditingValues] = useState<Record<string, string>>({});
 
-  // Only show ACTIVE influencers in tracking
   const activeInfluencers = influencers.filter((i) => i.is_active);
 
   const filtered = activeInfluencers.filter((i) => {
@@ -38,29 +38,45 @@ export default function TikTokTracking() {
     return matchSearch;
   });
 
-  const incrementVideo = (i: typeof influencers[0]) => {
-    const newCompleted = i.completed_videos + 1;
-    updateInfluencer.mutate({ id: i.id, completed_videos: newCompleted });
-
-    if (newCompleted >= i.target_videos && i.target_videos > 0 && i.completed_videos < i.target_videos) {
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      createPayment.mutate({
-        advertiser_id: i.id,
-        amount: i.salary,
-        campaign_month: currentMonth,
-        total_target_videos: i.target_videos,
-        completed_videos: newCompleted,
-        status: 'pending',
-        notes: 'Auto-added: target videos completed',
-      });
-      toast({ title: 'Target reached!', description: `${i.name} auto-added to Payment Confirmation as Pending` });
-    }
+  const handleCompletedChange = (i: typeof influencers[0], value: string) => {
+    setEditingValues(prev => ({ ...prev, [i.id]: value }));
   };
 
-  const decrementVideo = (i: typeof influencers[0]) => {
-    if (i.completed_videos > 0) {
-      updateInfluencer.mutate({ id: i.id, completed_videos: i.completed_videos - 1 });
+  const handleCompletedBlur = (i: typeof influencers[0]) => {
+    const raw = editingValues[i.id];
+    if (raw === undefined) return;
+    
+    let newCompleted = parseInt(raw, 10);
+    if (isNaN(newCompleted) || newCompleted < 0) newCompleted = 0;
+    if (newCompleted > i.target_videos) {
+      newCompleted = i.target_videos;
+      toast({ title: 'Validation', description: `Completed cannot exceed target (${i.target_videos})`, variant: 'destructive' });
     }
+
+    if (newCompleted !== i.completed_videos) {
+      const prevCompleted = i.completed_videos;
+      updateInfluencer.mutate({ id: i.id, completed_videos: newCompleted });
+
+      if (newCompleted >= i.target_videos && i.target_videos > 0 && prevCompleted < i.target_videos) {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        createPayment.mutate({
+          advertiser_id: i.id,
+          amount: i.salary,
+          campaign_month: currentMonth,
+          total_target_videos: i.target_videos,
+          completed_videos: newCompleted,
+          status: 'pending',
+          notes: 'Auto-added: target videos completed',
+        });
+        toast({ title: 'Target reached!', description: `${i.name} auto-added to Payment Confirmation as Pending` });
+      }
+    }
+
+    setEditingValues(prev => {
+      const next = { ...prev };
+      delete next[i.id];
+      return next;
+    });
   };
 
   const handleMonthlyReset = () => {
@@ -70,7 +86,6 @@ export default function TikTokTracking() {
     );
   };
 
-  const currentMonth = new Date().toISOString().slice(0, 7);
   const currentMonthName = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
 
   const handleExportCSV = () => {
@@ -122,7 +137,6 @@ export default function TikTokTracking() {
           </Select>
         </div>
 
-        {/* Tracking History Summary */}
         {history.length > 0 && (
           <Card>
             <CardContent className="p-4">
@@ -145,8 +159,10 @@ export default function TikTokTracking() {
 
         <div className="grid gap-4">
           {filtered.map((i) => {
-            const pct = i.target_videos > 0 ? Math.min(100, (i.completed_videos / i.target_videos) * 100) : 0;
-            const reached = i.target_videos > 0 && i.completed_videos >= i.target_videos;
+            const displayCompleted = editingValues[i.id] !== undefined ? editingValues[i.id] : String(i.completed_videos);
+            const currentCompleted = editingValues[i.id] !== undefined ? parseInt(editingValues[i.id], 10) || 0 : i.completed_videos;
+            const pct = i.target_videos > 0 ? Math.min(100, (currentCompleted / i.target_videos) * 100) : 0;
+            const reached = i.target_videos > 0 && currentCompleted >= i.target_videos;
             return (
               <Card key={i.id}>
                 <CardContent className="p-6">
@@ -166,21 +182,29 @@ export default function TikTokTracking() {
                           <Progress value={pct} className="h-3" />
                         </div>
                         <span className="text-sm font-medium whitespace-nowrap">
-                          {i.completed_videos} / {i.target_videos}
+                          {currentCompleted} / {i.target_videos}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {i.target_videos - i.completed_videos > 0 ? `${i.target_videos - i.completed_videos} remaining` : 'All targets completed!'}
+                        {i.target_videos - currentCompleted > 0 ? `${i.target_videos - currentCompleted} remaining` : 'All targets completed!'}
                       </p>
                     </div>
                     {canWrite && (
                       <div className="flex items-center gap-2">
-                        <Button size="sm" variant="outline" onClick={() => decrementVideo(i)} disabled={i.completed_videos === 0}>−</Button>
-                        <div className="flex items-center gap-1 px-3 py-1 bg-muted rounded-md">
-                          <Video className="h-4 w-4" />
-                          <span className="font-bold">{i.completed_videos}</span>
+                        <div className="flex items-center gap-2">
+                          <Video className="h-4 w-4 text-muted-foreground" />
+                          <Input
+                            type="number"
+                            min={0}
+                            max={i.target_videos}
+                            value={displayCompleted}
+                            onChange={(e) => handleCompletedChange(i, e.target.value)}
+                            onBlur={() => handleCompletedBlur(i)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleCompletedBlur(i); }}
+                            className="w-20 h-9 text-center font-bold"
+                          />
+                          <span className="text-sm text-muted-foreground">/ {i.target_videos}</span>
                         </div>
-                        <Button size="sm" onClick={() => incrementVideo(i)}>+</Button>
                       </div>
                     )}
                     {!canWrite && (
