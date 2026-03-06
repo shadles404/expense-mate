@@ -154,6 +154,22 @@ export default function TikTokPayments() {
             <Button variant="outline" onClick={handleExportCSV} disabled={filtered.length === 0}>
               <Download className="h-4 w-4 mr-2" />CSV
             </Button>
+            {isAdmin && payments.length > 0 && (
+              <Button variant="outline" onClick={() => {
+                if (!confirm('Archive all current payments to history? This preserves records and clears the current list for the new month.')) return;
+                archivePayments.mutate(payments.map(p => ({
+                  advertiser_id: p.advertiser_id,
+                  campaign_month: p.campaign_month || '',
+                  total_target_videos: p.total_target_videos,
+                  completed_videos: p.completed_videos,
+                  amount: p.amount,
+                  status: p.status,
+                  payment_date: p.payment_date,
+                })));
+              }} disabled={archivePayments.isPending}>
+                <Archive className="h-4 w-4 mr-2" />Archive & Reset
+              </Button>
+            )}
             {canWrite && eligibleCount > 0 && (
               <Button variant="secondary" onClick={handleAutoAdd} disabled={autoAddEligible.isPending}>
                 <Zap className="h-4 w-4 mr-2" />Auto-Add {eligibleCount} Eligible
