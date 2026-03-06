@@ -11,9 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useTikTokPayments } from '@/hooks/useTikTokPayments';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
+import { useTikTokPaymentHistory } from '@/hooks/useTikTokPaymentHistory';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
-import { Plus, Search, Download, Zap, Users, DollarSign, Clock, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Download, Zap, Users, DollarSign, Clock, AlertTriangle, Archive } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { downloadCSV } from '@/lib/csvExport';
