@@ -64,7 +64,24 @@ export default function TikTokDashboard() {
   const monthlyPaid = payments.filter(p => p.status === 'paid' && p.campaign_month === currentMonth).reduce((s, p) => s + p.amount, 0);
   const paidThisMonthCount = payments.filter(p => p.status === 'paid' && p.campaign_month === currentMonth).length;
 
-  // Monthly trend data
+  // Budget calculations
+  const paymentBudget = settings?.monthly_influencer_budget || 0;
+  const deliveryBudget = settings?.delivery_budget || 0;
+  const activeDeliveries = productDeliveries.filter(d => {
+    const inf = influencers.find(i => i.id === d.advertiser_id);
+    return inf?.is_active;
+  });
+  const currentMonthDeliveryTotal = activeDeliveries
+    .filter(d => d.date_sent.startsWith(currentMonth))
+    .reduce((s, d) => s + d.price * d.quantity, 0);
+  const currentMonthPaymentTotal = payments
+    .filter(p => p.campaign_month === currentMonth)
+    .reduce((s, p) => s + p.amount, 0);
+  const paymentBudgetPct = paymentBudget > 0 ? Math.min(100, (currentMonthPaymentTotal / paymentBudget) * 100) : 0;
+  const deliveryBudgetPct = deliveryBudget > 0 ? Math.min(100, (currentMonthDeliveryTotal / deliveryBudget) * 100) : 0;
+  const paymentOverBudget = paymentBudget > 0 && currentMonthPaymentTotal >= paymentBudget;
+  const deliveryOverBudget = deliveryBudget > 0 && currentMonthDeliveryTotal >= deliveryBudget;
+
   const monthlyTrend = useMemo(() => {
     const months = [...new Set(payments.map(p => p.campaign_month).filter(Boolean))].sort();
     return months.map(m => ({
