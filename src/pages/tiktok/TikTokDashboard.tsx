@@ -179,6 +179,55 @@ export default function TikTokDashboard() {
         {/* Contract Expiry Alerts */}
         {notifications.length > 0 && <ContractAlerts notifications={notifications} />}
 
+        {/* Budget Alerts */}
+        {(paymentOverBudget || deliveryOverBudget) && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="p-4 flex items-start gap-3">
+              <ShieldAlert className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-destructive">Budget Alert</p>
+                {paymentOverBudget && <p className="text-sm text-muted-foreground">Payment budget reached: ${currentMonthPaymentTotal.toFixed(2)} / ${paymentBudget.toFixed(2)}</p>}
+                {deliveryOverBudget && <p className="text-sm text-muted-foreground">Delivery budget reached: ${currentMonthDeliveryTotal.toFixed(2)} / ${deliveryBudget.toFixed(2)}</p>}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Budget Progress */}
+        {(paymentBudget > 0 || deliveryBudget > 0) && (
+          <div>
+            <h2 className="text-lg font-semibold mb-3">Budget Control</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {paymentBudget > 0 && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Payment Budget</CardTitle>
+                    <Wallet className="h-5 w-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">${currentMonthPaymentTotal.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">/ ${paymentBudget.toFixed(2)}</span></div>
+                    <Progress value={paymentBudgetPct} className={`h-2 mt-2 ${paymentOverBudget ? '[&>div]:bg-destructive' : ''}`} />
+                    <p className="text-xs text-muted-foreground mt-1">{paymentBudgetPct.toFixed(0)}% used</p>
+                  </CardContent>
+                </Card>
+              )}
+              {deliveryBudget > 0 && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Delivery Budget</CardTitle>
+                    <Package className="h-5 w-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">${currentMonthDeliveryTotal.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">/ ${deliveryBudget.toFixed(2)}</span></div>
+                    <Progress value={deliveryBudgetPct} className={`h-2 mt-2 ${deliveryOverBudget ? '[&>div]:bg-destructive' : ''}`} />
+                    <p className="text-xs text-muted-foreground mt-1">{deliveryBudgetPct.toFixed(0)}% used</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Influencer Overview */}
         <div>
           <h2 className="text-lg font-semibold mb-3">Influencer Overview</h2>
