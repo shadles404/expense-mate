@@ -31,6 +31,7 @@ export default function TikTokPayments() {
   const { payments, auditLogs, isLoading, createPayment, updatePaymentStatus, autoAddEligible } = useTikTokPayments();
   const { influencers } = useTikTokAdvertisers();
   const { archivePayments } = useTikTokPaymentHistory();
+  const { settings } = useTikTokSettings();
   const { isAdmin } = useUserRole();
   const { canWriteSection } = useTikTokSectionPermissions();
   const canWrite = canWriteSection('tiktok_payments');
