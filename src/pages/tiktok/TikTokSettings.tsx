@@ -13,6 +13,8 @@ export default function TikTokSettingsPage() {
     currency: 'USD',
     default_contract_type: 'Freelance',
     tax_rate: 0,
+    monthly_influencer_budget: 0,
+    delivery_budget: 0,
   });
 
   useEffect(() => {
@@ -21,6 +23,8 @@ export default function TikTokSettingsPage() {
         currency: settings.currency || 'USD',
         default_contract_type: settings.default_contract_type || 'Freelance',
         tax_rate: settings.tax_rate || 0,
+        monthly_influencer_budget: settings.monthly_influencer_budget || 0,
+        delivery_budget: settings.delivery_budget || 0,
       });
     }
   }, [settings]);
