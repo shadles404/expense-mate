@@ -30,6 +30,7 @@ const PAYMENT_STATUS_COLORS: Record<string, 'default' | 'secondary'> = {
 export default function TikTokDelivery() {
   const { productDeliveries, isLoading, createProductDelivery, updateProductDelivery } = useTikTokProductDeliveries();
   const { influencers } = useTikTokAdvertisers();
+  const { settings } = useTikTokSettings();
   const { canWriteSection } = useTikTokSectionPermissions();
   const { isAdmin } = useUserRole();
   const canWrite = canWriteSection('tiktok_delivery');
