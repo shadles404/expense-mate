@@ -30,6 +30,7 @@ export default function TikTokDashboard() {
   const { influencers } = useTikTokAdvertisers();
   const { productDeliveries } = useTikTokProductDeliveries();
   const { payments } = useTikTokPayments();
+  const { settings } = useTikTokSettings();
   const { notifications, expiringCount } = useContractNotifications(influencers);
 
   const [filterMonth, setFilterMonth] = useState('all');
