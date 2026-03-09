@@ -11,9 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { useTikTokProductDeliveries } from '@/hooks/useTikTokProductDeliveries';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
+import { useTikTokSettings } from '@/hooks/useTikTokSettings';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, Search, Pencil, Download, DollarSign, Clock } from 'lucide-react';
+import { Plus, Search, Pencil, Download, DollarSign, Clock, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { downloadCSV } from '@/lib/csvExport';
 import type { TikTokProductDelivery } from '@/types/tiktok';
@@ -29,6 +30,7 @@ const PAYMENT_STATUS_COLORS: Record<string, 'default' | 'secondary'> = {
 export default function TikTokDelivery() {
   const { productDeliveries, isLoading, createProductDelivery, updateProductDelivery } = useTikTokProductDeliveries();
   const { influencers } = useTikTokAdvertisers();
+  const { settings } = useTikTokSettings();
   const { canWriteSection } = useTikTokSectionPermissions();
   const { isAdmin } = useUserRole();
   const canWrite = canWriteSection('tiktok_delivery');
@@ -67,6 +69,20 @@ export default function TikTokDelivery() {
       date_sent: form.date_sent, status: form.status, price: form.price, notes: form.notes || null,
       payment_status: form.payment_status,
     };
+    // Budget check for new deliveries
+    const budget = settings?.delivery_budget || 0;
+    const newValue = form.price * form.quantity;
+    if (budget > 0 && !editing) {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const currentTotal = productDeliveries
+        .filter(d => d.date_sent.startsWith(currentMonth))
+        .reduce((s, d) => s + d.price * d.quantity, 0);
+      if (currentTotal + newValue > budget) {
+        if (!confirm(`⚠️ Budget Alert: Adding this delivery ($${newValue.toFixed(2)}) will exceed the delivery budget of $${budget.toFixed(2)} (current total: $${currentTotal.toFixed(2)}). Continue anyway?`)) {
+          return;
+        }
+      }
+    }
     if (editing) {
       updateProductDelivery.mutate({ id: editing.id, ...payload });
     } else {
@@ -91,6 +107,14 @@ export default function TikTokDelivery() {
   const unpaidDeliveries = filtered.filter(d => (d as any).payment_status !== 'paid');
   const totalPaidAmount = paidDeliveries.reduce((sum, d) => sum + d.price * d.quantity, 0);
   const totalPendingAmount = unpaidDeliveries.reduce((sum, d) => sum + d.price * d.quantity, 0);
+
+  // Delivery budget check
+  const deliveryBudget = settings?.delivery_budget || 0;
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonthTotal = productDeliveries
+    .filter(d => d.date_sent.startsWith(currentMonth))
+    .reduce((s, d) => s + d.price * d.quantity, 0);
+  const deliveryOverBudget = deliveryBudget > 0 && currentMonthTotal >= deliveryBudget;
 
   const handleExportCSV = () => {
     downloadCSV(filtered.map((d) => ({
@@ -172,6 +196,19 @@ export default function TikTokDelivery() {
             )}
           </div>
         </div>
+
+        {/* Budget Alert */}
+        {deliveryOverBudget && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="p-4 flex items-start gap-3">
+              <ShieldAlert className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-destructive">Delivery Budget Reached</p>
+                <p className="text-sm text-muted-foreground">Current month total: ${currentMonthTotal.toFixed(2)} / Budget: ${deliveryBudget.toFixed(2)}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Payment Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

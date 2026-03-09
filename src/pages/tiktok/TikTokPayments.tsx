@@ -12,9 +12,10 @@ import { Badge } from '@/components/ui/badge';
 import { useTikTokPayments } from '@/hooks/useTikTokPayments';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokPaymentHistory } from '@/hooks/useTikTokPaymentHistory';
+import { useTikTokSettings } from '@/hooks/useTikTokSettings';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
-import { Plus, Search, Download, Zap, Users, DollarSign, Clock, AlertTriangle, Archive } from 'lucide-react';
+import { Plus, Search, Download, Zap, Users, DollarSign, Clock, AlertTriangle, Archive, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { downloadCSV } from '@/lib/csvExport';
@@ -30,6 +31,7 @@ export default function TikTokPayments() {
   const { payments, auditLogs, isLoading, createPayment, updatePaymentStatus, autoAddEligible } = useTikTokPayments();
   const { influencers } = useTikTokAdvertisers();
   const { archivePayments } = useTikTokPaymentHistory();
+  const { settings } = useTikTokSettings();
   const { isAdmin } = useUserRole();
   const { canWriteSection } = useTikTokSectionPermissions();
   const canWrite = canWriteSection('tiktok_payments');
@@ -79,11 +81,20 @@ export default function TikTokPayments() {
       toast({ title: 'Campaign month required', variant: 'destructive' });
       return;
     }
-    // Check duplicate
     const exists = payments.some(p => p.advertiser_id === form.advertiser_id && p.campaign_month === form.campaign_month);
     if (exists) {
       toast({ title: 'Duplicate detected', description: 'Payment already recorded for this influencer this month', variant: 'destructive' });
       return;
+    }
+    // Budget check
+    const budget = settings?.monthly_influencer_budget || 0;
+    if (budget > 0) {
+      const currentTotal = payments.filter(p => p.campaign_month === form.campaign_month).reduce((s, p) => s + p.amount, 0);
+      if (currentTotal + form.amount > budget) {
+        if (!confirm(`⚠️ Budget Alert: Adding this payment ($${form.amount}) will exceed the monthly budget of $${budget.toFixed(2)} (current total: $${currentTotal.toFixed(2)}). Continue anyway?`)) {
+          return;
+        }
+      }
     }
     createPayment.mutate({
       advertiser_id: form.advertiser_id,
@@ -123,6 +134,11 @@ export default function TikTokPayments() {
   const totalTarget = activeInfluencers.filter(i => i.target_videos > 0).length;
   const reachedTarget = activeInfluencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
   const completionRate = totalTarget > 0 ? Math.round((reachedTarget / totalTarget) * 100) : 0;
+
+  // Budget check
+  const paymentBudget = settings?.monthly_influencer_budget || 0;
+  const currentMonthTotal = monthPayments.reduce((s, p) => s + p.amount, 0);
+  const paymentOverBudget = paymentBudget > 0 && currentMonthTotal >= paymentBudget;
 
   const handleExportCSV = () => {
     downloadCSV(filtered.map(p => ({
@@ -216,6 +232,19 @@ export default function TikTokPayments() {
             )}
           </div>
         </div>
+
+        {/* Budget Alert */}
+        {paymentOverBudget && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="p-4 flex items-start gap-3">
+              <ShieldAlert className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-destructive">Payment Budget Reached</p>
+                <p className="text-sm text-muted-foreground">Current month total: ${currentMonthTotal.toFixed(2)} / Budget: ${paymentBudget.toFixed(2)}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* KPI Cards */}
         <div className="grid gap-4 md:grid-cols-4">

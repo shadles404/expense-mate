@@ -3,12 +3,14 @@ import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokProductDeliveries } from '@/hooks/useTikTokProductDeliveries';
 import { useTikTokPayments } from '@/hooks/useTikTokPayments';
+import { useTikTokSettings } from '@/hooks/useTikTokSettings';
 import { useContractNotifications } from '@/hooks/useContractNotifications';
 import { ContractAlerts } from '@/components/tiktok/ContractAlerts';
-import { Users, Video, Package, DollarSign, TrendingUp, TrendingDown, Wallet, Clock, Download, Percent, AlertTriangle, UserX, UserCheck } from 'lucide-react';
+import { Users, Video, Package, DollarSign, TrendingUp, TrendingDown, Wallet, Clock, Download, Percent, AlertTriangle, UserX, UserCheck, ShieldAlert } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +24,7 @@ export default function TikTokDashboard() {
   const { influencers } = useTikTokAdvertisers();
   const { productDeliveries } = useTikTokProductDeliveries();
   const { payments } = useTikTokPayments();
+  const { settings } = useTikTokSettings();
   const { notifications, expiringCount } = useContractNotifications(influencers);
 
   const [filterMonth, setFilterMonth] = useState('all');
@@ -61,7 +64,24 @@ export default function TikTokDashboard() {
   const monthlyPaid = payments.filter(p => p.status === 'paid' && p.campaign_month === currentMonth).reduce((s, p) => s + p.amount, 0);
   const paidThisMonthCount = payments.filter(p => p.status === 'paid' && p.campaign_month === currentMonth).length;
 
-  // Monthly trend data
+  // Budget calculations
+  const paymentBudget = settings?.monthly_influencer_budget || 0;
+  const deliveryBudget = settings?.delivery_budget || 0;
+  const activeDeliveries = productDeliveries.filter(d => {
+    const inf = influencers.find(i => i.id === d.advertiser_id);
+    return inf?.is_active;
+  });
+  const currentMonthDeliveryTotal = activeDeliveries
+    .filter(d => d.date_sent.startsWith(currentMonth))
+    .reduce((s, d) => s + d.price * d.quantity, 0);
+  const currentMonthPaymentTotal = payments
+    .filter(p => p.campaign_month === currentMonth)
+    .reduce((s, p) => s + p.amount, 0);
+  const paymentBudgetPct = paymentBudget > 0 ? Math.min(100, (currentMonthPaymentTotal / paymentBudget) * 100) : 0;
+  const deliveryBudgetPct = deliveryBudget > 0 ? Math.min(100, (currentMonthDeliveryTotal / deliveryBudget) * 100) : 0;
+  const paymentOverBudget = paymentBudget > 0 && currentMonthPaymentTotal >= paymentBudget;
+  const deliveryOverBudget = deliveryBudget > 0 && currentMonthDeliveryTotal >= deliveryBudget;
+
   const monthlyTrend = useMemo(() => {
     const months = [...new Set(payments.map(p => p.campaign_month).filter(Boolean))].sort();
     return months.map(m => ({
@@ -158,6 +178,55 @@ export default function TikTokDashboard() {
 
         {/* Contract Expiry Alerts */}
         {notifications.length > 0 && <ContractAlerts notifications={notifications} />}
+
+        {/* Budget Alerts */}
+        {(paymentOverBudget || deliveryOverBudget) && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="p-4 flex items-start gap-3">
+              <ShieldAlert className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-destructive">Budget Alert</p>
+                {paymentOverBudget && <p className="text-sm text-muted-foreground">Payment budget reached: ${currentMonthPaymentTotal.toFixed(2)} / ${paymentBudget.toFixed(2)}</p>}
+                {deliveryOverBudget && <p className="text-sm text-muted-foreground">Delivery budget reached: ${currentMonthDeliveryTotal.toFixed(2)} / ${deliveryBudget.toFixed(2)}</p>}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Budget Progress */}
+        {(paymentBudget > 0 || deliveryBudget > 0) && (
+          <div>
+            <h2 className="text-lg font-semibold mb-3">Budget Control</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {paymentBudget > 0 && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Payment Budget</CardTitle>
+                    <Wallet className="h-5 w-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">${currentMonthPaymentTotal.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">/ ${paymentBudget.toFixed(2)}</span></div>
+                    <Progress value={paymentBudgetPct} className={`h-2 mt-2 ${paymentOverBudget ? '[&>div]:bg-destructive' : ''}`} />
+                    <p className="text-xs text-muted-foreground mt-1">{paymentBudgetPct.toFixed(0)}% used</p>
+                  </CardContent>
+                </Card>
+              )}
+              {deliveryBudget > 0 && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Delivery Budget</CardTitle>
+                    <Package className="h-5 w-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">${currentMonthDeliveryTotal.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">/ ${deliveryBudget.toFixed(2)}</span></div>
+                    <Progress value={deliveryBudgetPct} className={`h-2 mt-2 ${deliveryOverBudget ? '[&>div]:bg-destructive' : ''}`} />
+                    <p className="text-xs text-muted-foreground mt-1">{deliveryBudgetPct.toFixed(0)}% used</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Influencer Overview */}
         <div>

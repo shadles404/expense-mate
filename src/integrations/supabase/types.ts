@@ -852,7 +852,9 @@ export type Database = {
             | Database["public"]["Enums"]["contract_type"]
             | null
           default_platform: Database["public"]["Enums"]["platform_type"] | null
+          delivery_budget: number | null
           id: string
+          monthly_influencer_budget: number | null
           tax_rate: number | null
           updated_at: string
           user_id: string
@@ -864,7 +866,9 @@ export type Database = {
             | Database["public"]["Enums"]["contract_type"]
             | null
           default_platform?: Database["public"]["Enums"]["platform_type"] | null
+          delivery_budget?: number | null
           id?: string
+          monthly_influencer_budget?: number | null
           tax_rate?: number | null
           updated_at?: string
           user_id: string
@@ -876,7 +880,9 @@ export type Database = {
             | Database["public"]["Enums"]["contract_type"]
             | null
           default_platform?: Database["public"]["Enums"]["platform_type"] | null
+          delivery_budget?: number | null
           id?: string
+          monthly_influencer_budget?: number | null
           tax_rate?: number | null
           updated_at?: string
           user_id?: string

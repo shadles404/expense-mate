@@ -89,6 +89,8 @@ export interface TikTokSettings {
   default_platform: string | null;
   default_contract_type: string | null;
   tax_rate: number | null;
+  monthly_influencer_budget: number | null;
+  delivery_budget: number | null;
   created_at: string;
   updated_at: string;
 }
