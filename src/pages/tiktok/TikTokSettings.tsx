@@ -34,6 +34,8 @@ export default function TikTokSettingsPage() {
       currency: form.currency,
       default_contract_type: form.default_contract_type,
       tax_rate: form.tax_rate,
+      monthly_influencer_budget: form.monthly_influencer_budget,
+      delivery_budget: form.delivery_budget,
     } as any);
   };
 
