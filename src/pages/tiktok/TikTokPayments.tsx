@@ -233,6 +233,19 @@ export default function TikTokPayments() {
           </div>
         </div>
 
+        {/* Budget Alert */}
+        {paymentOverBudget && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="p-4 flex items-start gap-3">
+              <ShieldAlert className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-destructive">Payment Budget Reached</p>
+                <p className="text-sm text-muted-foreground">Current month total: ${currentMonthTotal.toFixed(2)} / Budget: ${paymentBudget.toFixed(2)}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* KPI Cards */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
