@@ -108,6 +108,14 @@ export default function TikTokDelivery() {
   const totalPaidAmount = paidDeliveries.reduce((sum, d) => sum + d.price * d.quantity, 0);
   const totalPendingAmount = unpaidDeliveries.reduce((sum, d) => sum + d.price * d.quantity, 0);
 
+  // Delivery budget check
+  const deliveryBudget = settings?.delivery_budget || 0;
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonthTotal = productDeliveries
+    .filter(d => d.date_sent.startsWith(currentMonth))
+    .reduce((s, d) => s + d.price * d.quantity, 0);
+  const deliveryOverBudget = deliveryBudget > 0 && currentMonthTotal >= deliveryBudget;
+
   const handleExportCSV = () => {
     downloadCSV(filtered.map((d) => ({
       Influencer: d.advertiser?.name || '',
