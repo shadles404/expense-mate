@@ -81,11 +81,20 @@ export default function TikTokPayments() {
       toast({ title: 'Campaign month required', variant: 'destructive' });
       return;
     }
-    // Check duplicate
     const exists = payments.some(p => p.advertiser_id === form.advertiser_id && p.campaign_month === form.campaign_month);
     if (exists) {
       toast({ title: 'Duplicate detected', description: 'Payment already recorded for this influencer this month', variant: 'destructive' });
       return;
+    }
+    // Budget check
+    const budget = settings?.monthly_influencer_budget || 0;
+    if (budget > 0) {
+      const currentTotal = payments.filter(p => p.campaign_month === form.campaign_month).reduce((s, p) => s + p.amount, 0);
+      if (currentTotal + form.amount > budget) {
+        if (!confirm(`⚠️ Budget Alert: Adding this payment ($${form.amount}) will exceed the monthly budget of $${budget.toFixed(2)} (current total: $${currentTotal.toFixed(2)}). Continue anyway?`)) {
+          return;
+        }
+      }
     }
     createPayment.mutate({
       advertiser_id: form.advertiser_id,

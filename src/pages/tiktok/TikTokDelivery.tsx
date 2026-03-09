@@ -69,6 +69,20 @@ export default function TikTokDelivery() {
       date_sent: form.date_sent, status: form.status, price: form.price, notes: form.notes || null,
       payment_status: form.payment_status,
     };
+    // Budget check for new deliveries
+    const budget = settings?.delivery_budget || 0;
+    const newValue = form.price * form.quantity;
+    if (budget > 0 && !editing) {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const currentTotal = productDeliveries
+        .filter(d => d.date_sent.startsWith(currentMonth))
+        .reduce((s, d) => s + d.price * d.quantity, 0);
+      if (currentTotal + newValue > budget) {
+        if (!confirm(`⚠️ Budget Alert: Adding this delivery ($${newValue.toFixed(2)}) will exceed the delivery budget of $${budget.toFixed(2)} (current total: $${currentTotal.toFixed(2)}). Continue anyway?`)) {
+          return;
+        }
+      }
+    }
     if (editing) {
       updateProductDelivery.mutate({ id: editing.id, ...payload });
     } else {
