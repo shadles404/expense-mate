@@ -145,6 +145,17 @@ export default function TikTokPayments() {
   // Budget check
   const paymentBudget = settings?.monthly_influencer_budget || 0;
   const currentMonthTotal = monthPayments.reduce((s, p) => s + p.amount, 0);
+
+  // Sync stale payment amounts with current salary in the database
+  useMemo(() => {
+    payments.forEach(p => {
+      const inf = influencers.find(i => i.id === p.advertiser_id);
+      if (inf && inf.salary !== p.amount && p.status !== 'paid') {
+        updatePayment.mutate({ id: p.id, amount: inf.salary });
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payments.length, influencers.length]);
   const paymentOverBudget = paymentBudget > 0 && currentMonthTotal >= paymentBudget;
 
   const handleExportCSV = () => {
