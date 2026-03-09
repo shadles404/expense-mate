@@ -135,6 +135,11 @@ export default function TikTokPayments() {
   const reachedTarget = activeInfluencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
   const completionRate = totalTarget > 0 ? Math.round((reachedTarget / totalTarget) * 100) : 0;
 
+  // Budget check
+  const paymentBudget = settings?.monthly_influencer_budget || 0;
+  const currentMonthTotal = monthPayments.reduce((s, p) => s + p.amount, 0);
+  const paymentOverBudget = paymentBudget > 0 && currentMonthTotal >= paymentBudget;
+
   const handleExportCSV = () => {
     downloadCSV(filtered.map(p => ({
       Influencer: p.advertiser?.name || '',
