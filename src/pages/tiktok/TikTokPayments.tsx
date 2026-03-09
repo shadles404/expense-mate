@@ -119,7 +119,14 @@ export default function TikTokPayments() {
     updatePaymentStatus.mutate({ id: paymentId, status: newStatus });
   };
 
-  const filtered = payments.filter(p => {
+  // Enrich payments with current salary from influencer profile
+  const enrichedPayments = useMemo(() => payments.map(p => {
+    const inf = influencers.find(i => i.id === p.advertiser_id);
+    const correctAmount = inf?.salary ?? p.amount;
+    return { ...p, amount: correctAmount };
+  }), [payments, influencers]);
+
+  const filtered = enrichedPayments.filter(p => {
     const matchSearch = (p.advertiser?.name || '').toLowerCase().includes(search.toLowerCase());
     const matchMonth = filterMonth === 'all' || p.campaign_month === filterMonth;
     const matchStatus = filterStatus === 'all' || p.status === filterStatus;
