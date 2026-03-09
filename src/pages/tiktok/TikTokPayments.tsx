@@ -133,11 +133,11 @@ export default function TikTokPayments() {
     return matchSearch && matchMonth && matchStatus;
   });
 
-  // KPI calculations
-  const monthPayments = payments.filter(p => p.campaign_month === currentMonth);
+  // KPI calculations (use enriched payments with correct salary)
+  const monthPayments = enrichedPayments.filter(p => p.campaign_month === currentMonth);
   const totalPaidThisMonth = monthPayments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
   const paidCount = monthPayments.filter(p => p.status === 'paid').length;
-  const pendingAmount = payments.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
+  const pendingAmount = enrichedPayments.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
   const totalTarget = activeInfluencers.filter(i => i.target_videos > 0).length;
   const reachedTarget = activeInfluencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
   const completionRate = totalTarget > 0 ? Math.round((reachedTarget / totalTarget) * 100) : 0;
