@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive' | 'o
 };
 
 export default function TikTokPayments() {
-  const { payments, auditLogs, isLoading, createPayment, updatePaymentStatus, autoAddEligible } = useTikTokPayments();
+  const { payments, auditLogs, isLoading, createPayment, updatePayment, updatePaymentStatus, autoAddEligible } = useTikTokPayments();
   const { influencers } = useTikTokAdvertisers();
   const { archivePayments } = useTikTokPaymentHistory();
   const { settings } = useTikTokSettings();
@@ -119,18 +119,25 @@ export default function TikTokPayments() {
     updatePaymentStatus.mutate({ id: paymentId, status: newStatus });
   };
 
-  const filtered = payments.filter(p => {
+  // Enrich payments with current salary from influencer profile
+  const enrichedPayments = useMemo(() => payments.map(p => {
+    const inf = influencers.find(i => i.id === p.advertiser_id);
+    const correctAmount = inf?.salary ?? p.amount;
+    return { ...p, amount: correctAmount };
+  }), [payments, influencers]);
+
+  const filtered = enrichedPayments.filter(p => {
     const matchSearch = (p.advertiser?.name || '').toLowerCase().includes(search.toLowerCase());
     const matchMonth = filterMonth === 'all' || p.campaign_month === filterMonth;
     const matchStatus = filterStatus === 'all' || p.status === filterStatus;
     return matchSearch && matchMonth && matchStatus;
   });
 
-  // KPI calculations
-  const monthPayments = payments.filter(p => p.campaign_month === currentMonth);
+  // KPI calculations (use enriched payments with correct salary)
+  const monthPayments = enrichedPayments.filter(p => p.campaign_month === currentMonth);
   const totalPaidThisMonth = monthPayments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
   const paidCount = monthPayments.filter(p => p.status === 'paid').length;
-  const pendingAmount = payments.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
+  const pendingAmount = enrichedPayments.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
   const totalTarget = activeInfluencers.filter(i => i.target_videos > 0).length;
   const reachedTarget = activeInfluencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
   const completionRate = totalTarget > 0 ? Math.round((reachedTarget / totalTarget) * 100) : 0;
@@ -138,6 +145,19 @@ export default function TikTokPayments() {
   // Budget check
   const paymentBudget = settings?.monthly_influencer_budget || 0;
   const currentMonthTotal = monthPayments.reduce((s, p) => s + p.amount, 0);
+
+  // Sync stale payment amounts with current salary in the database (one-time per data load)
+  const syncedRef = useRef(false);
+  useEffect(() => {
+    if (syncedRef.current || payments.length === 0 || influencers.length === 0) return;
+    syncedRef.current = true;
+    payments.forEach(p => {
+      const inf = influencers.find(i => i.id === p.advertiser_id);
+      if (inf && inf.salary !== p.amount && p.status !== 'paid') {
+        updatePayment.mutate({ id: p.id, amount: inf.salary });
+      }
+    });
+  }, [payments, influencers]); // eslint-disable-line react-hooks/exhaustive-deps
   const paymentOverBudget = paymentBudget > 0 && currentMonthTotal >= paymentBudget;
 
   const handleExportCSV = () => {
