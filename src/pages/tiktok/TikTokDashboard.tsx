@@ -17,12 +17,6 @@ import { Badge } from '@/components/ui/badge';
 import { downloadCSV } from '@/lib/csvExport';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, PieChart, Pie, Cell } from 'recharts';
-import { Badge } from '@/components/ui/badge';
-import { downloadCSV } from '@/lib/csvExport';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--destructive))', 'hsl(var(--muted-foreground))', 'hsl(var(--accent-foreground))'];
 
