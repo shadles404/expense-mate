@@ -197,6 +197,19 @@ export default function TikTokDelivery() {
           </div>
         </div>
 
+        {/* Budget Alert */}
+        {deliveryOverBudget && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="p-4 flex items-start gap-3">
+              <ShieldAlert className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-destructive">Delivery Budget Reached</p>
+                <p className="text-sm text-muted-foreground">Current month total: ${currentMonthTotal.toFixed(2)} / Budget: ${deliveryBudget.toFixed(2)}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Payment Summary Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card>
