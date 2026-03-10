@@ -143,6 +143,7 @@ export default function TikTokPayments() {
   const completionRate = totalTarget > 0 ? Math.round((reachedTarget / totalTarget) * 100) : 0;
 
   // Budget check
+  const monthPayments = enrichedPayments.filter(p => p.campaign_month === currentMonth);
   const paymentBudget = settings?.monthly_influencer_budget || 0;
   const currentMonthTotal = monthPayments.reduce((s, p) => s + p.amount, 0);
 
