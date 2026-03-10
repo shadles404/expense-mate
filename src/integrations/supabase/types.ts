@@ -991,7 +991,7 @@ export type Database = {
         | "consultation"
         | "other"
       payment_project_status: "unpaid" | "partially_paid" | "paid"
-      payment_status: "paid" | "unpaid"
+      payment_status: "paid" | "unpaid" | "pending" | "suspended"
       platform_type: "TikTok" | "Instagram" | "YouTube" | "Facebook" | "Other"
       product_delivery_status: "pending" | "sent" | "returned"
     }
@@ -1147,7 +1147,7 @@ export const Constants = {
         "other",
       ],
       payment_project_status: ["unpaid", "partially_paid", "paid"],
-      payment_status: ["paid", "unpaid"],
+      payment_status: ["paid", "unpaid", "pending", "suspended"],
       platform_type: ["TikTok", "Instagram", "YouTube", "Facebook", "Other"],
       product_delivery_status: ["pending", "sent", "returned"],
     },
