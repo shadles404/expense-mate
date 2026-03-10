@@ -296,7 +296,7 @@ export default function TikTokPayments() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">${pendingAmount.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground mt-1">{payments.filter(p => p.status === 'pending' || p.status === 'unpaid').length} payments</p>
+              <p className="text-xs text-muted-foreground mt-1">{pendingCount} payments</p>
             </CardContent>
           </Card>
           <Card>
