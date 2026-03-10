@@ -286,7 +286,7 @@ export default function TikTokPayments() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{paidCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">This month ({currentMonth})</p>
+              <p className="text-xs text-muted-foreground mt-1">Based on current filters</p>
             </CardContent>
           </Card>
           <Card>
