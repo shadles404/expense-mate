@@ -133,13 +133,13 @@ export default function TikTokPayments() {
     return matchSearch && matchMonth && matchStatus;
   });
 
-  // KPI calculations (use enriched payments with correct salary)
-  const monthPayments = enrichedPayments.filter(p => p.campaign_month === currentMonth);
-  const totalPaidThisMonth = monthPayments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
-  const paidCount = monthPayments.filter(p => p.status === 'paid').length;
-  const pendingAmount = enrichedPayments.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
-  const totalTarget = activeInfluencers.filter(i => i.target_videos > 0).length;
-  const reachedTarget = activeInfluencers.filter(i => i.completed_videos >= i.target_videos && i.target_videos > 0).length;
+  // KPI calculations — derived from the same filtered dataset shown in the table
+  const totalPaidThisMonth = filtered.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
+  const paidCount = filtered.filter(p => p.status === 'paid').length;
+  const pendingAmount = filtered.filter(p => p.status === 'pending' || p.status === 'unpaid').reduce((s, p) => s + p.amount, 0);
+  const pendingCount = filtered.filter(p => p.status === 'pending' || p.status === 'unpaid').length;
+  const totalTarget = filtered.length;
+  const reachedTarget = filtered.filter(p => (p.completed_videos ?? 0) >= (p.total_target_videos ?? 1) && (p.total_target_videos ?? 0) > 0).length;
   const completionRate = totalTarget > 0 ? Math.round((reachedTarget / totalTarget) * 100) : 0;
 
   // Budget check
