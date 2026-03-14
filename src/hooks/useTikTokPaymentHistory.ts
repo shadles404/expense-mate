@@ -37,9 +37,14 @@ export function useTikTokPaymentHistory() {
   });
 
   const archivePayments = useMutation({
-    mutationFn: async (payments: Array<{ advertiser_id: string; campaign_month: string; total_target_videos: number; completed_videos: number | null; amount: number; status: string; payment_date: string | null }>) => {
+    mutationFn: async (payments: Array<{ id: string; advertiser_id: string; campaign_month: string; total_target_videos: number; completed_videos: number | null; amount: number; status: string; payment_date: string | null }>) => {
       if (payments.length === 0) throw new Error('No payments to archive');
 
+      // Separate reached vs unreached
+      const reached = payments.filter(p => (p.completed_videos ?? 0) >= (p.total_target_videos ?? 1) && (p.total_target_videos ?? 0) > 0);
+      const unreached = payments.filter(p => !((p.completed_videos ?? 0) >= (p.total_target_videos ?? 1) && (p.total_target_videos ?? 0) > 0));
+
+      // Archive ALL payments to history
       const archives = payments.map(p => ({
         user_id: user!.id,
         advertiser_id: p.advertiser_id,
@@ -51,16 +56,30 @@ export function useTikTokPaymentHistory() {
         payment_date: p.payment_date,
       }));
 
-      const { error } = await (supabase as any)
+      const { error: archiveError } = await (supabase as any)
         .from('tiktok_payment_history')
         .insert(archives);
-      if (error) throw error;
+      if (archiveError) throw archiveError;
 
-      return archives.length;
+      // Delete ONLY unreached influencers from the active payments table
+      if (unreached.length > 0) {
+        const unreachedIds = unreached.map(p => p.id);
+        const { error: deleteError } = await supabase
+          .from('tiktok_payments')
+          .delete()
+          .in('id', unreachedIds);
+        if (deleteError) throw deleteError;
+      }
+
+      return { archived: archives.length, removed: unreached.length, kept: reached.length };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ archived, removed, kept }) => {
       queryClient.invalidateQueries({ queryKey: ['tiktok-payment-history'] });
-      toast({ title: `${count} payments archived to history` });
+      queryClient.invalidateQueries({ queryKey: ['tiktok-payments'] });
+      toast({ 
+        title: 'Monthly reset complete', 
+        description: `${archived} archived · ${kept} reached (kept) · ${removed} unreached (removed)` 
+      });
     },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   });
