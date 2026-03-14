@@ -193,19 +193,24 @@ export default function TikTokPayments() {
             </Button>
             {isAdmin && payments.length > 0 && (
               <Button variant="outline" onClick={() => {
-                const reached = payments.filter(p => (p.completed_videos ?? 0) >= (p.total_target_videos ?? 1) && (p.total_target_videos ?? 0) > 0);
-                const unreached = payments.filter(p => !((p.completed_videos ?? 0) >= (p.total_target_videos ?? 1) && (p.total_target_videos ?? 0) > 0));
-                if (!confirm(`Monthly Reset:\n• ${reached.length} reached target → archived & kept\n• ${unreached.length} unreached → archived & removed\n\nContinue?`)) return;
-                archivePayments.mutate(payments.map(p => ({
-                  id: p.id,
-                  advertiser_id: p.advertiser_id,
-                  campaign_month: p.campaign_month || '',
-                  total_target_videos: p.total_target_videos,
-                  completed_videos: p.completed_videos,
-                  amount: p.amount,
-                  status: p.status,
-                  payment_date: p.payment_date,
-                })));
+                // Use CURRENT influencer data for target checks, not stale payment values
+                const paymentsWithCurrentData = payments.map(p => {
+                  const inf = influencers.find(i => i.id === p.advertiser_id);
+                  return {
+                    id: p.id,
+                    advertiser_id: p.advertiser_id,
+                    campaign_month: p.campaign_month || '',
+                    total_target_videos: inf?.target_videos ?? p.total_target_videos ?? 0,
+                    completed_videos: inf?.completed_videos ?? p.completed_videos ?? 0,
+                    amount: p.amount,
+                    status: p.status,
+                    payment_date: p.payment_date,
+                  };
+                });
+                const reached = paymentsWithCurrentData.filter(p => p.completed_videos >= p.total_target_videos && p.total_target_videos > 0);
+                const unreached = paymentsWithCurrentData.filter(p => !(p.completed_videos >= p.total_target_videos && p.total_target_videos > 0));
+                if (!confirm(`Monthly Reset:\n• ${reached.length} reached target → kept\n• ${unreached.length} unreached → removed\n\nContinue?`)) return;
+                archivePayments.mutate(paymentsWithCurrentData);
               }} disabled={archivePayments.isPending}>
                 <Archive className="h-4 w-4 mr-2" />Archive & Reset
               </Button>
