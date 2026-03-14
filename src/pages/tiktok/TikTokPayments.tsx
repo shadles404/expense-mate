@@ -193,8 +193,11 @@ export default function TikTokPayments() {
             </Button>
             {isAdmin && payments.length > 0 && (
               <Button variant="outline" onClick={() => {
-                if (!confirm('Archive all current payments to history? This preserves records and clears the current list for the new month.')) return;
+                const reached = payments.filter(p => (p.completed_videos ?? 0) >= (p.total_target_videos ?? 1) && (p.total_target_videos ?? 0) > 0);
+                const unreached = payments.filter(p => !((p.completed_videos ?? 0) >= (p.total_target_videos ?? 1) && (p.total_target_videos ?? 0) > 0));
+                if (!confirm(`Monthly Reset:\n• ${reached.length} reached target → archived & kept\n• ${unreached.length} unreached → archived & removed\n\nContinue?`)) return;
                 archivePayments.mutate(payments.map(p => ({
+                  id: p.id,
                   advertiser_id: p.advertiser_id,
                   campaign_month: p.campaign_month || '',
                   total_target_videos: p.total_target_videos,
