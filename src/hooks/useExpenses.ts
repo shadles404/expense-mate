@@ -37,9 +37,10 @@ export function useExpenses(projectId: string | undefined) {
     mutationFn: async (data: Omit<Expense, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
       if (!user) throw new Error('Not authenticated');
       
+      // Always use 'Other' for the legacy enum column; real category is in category_id
       const { data: expense, error } = await supabase
         .from('expenses')
-        .insert([{ ...data, user_id: user.id }])
+        .insert([{ ...data, category: 'Other' as any, user_id: user.id }])
         .select()
         .single();
 
@@ -57,9 +58,13 @@ export function useExpenses(projectId: string | undefined) {
 
   const updateExpense = useMutation({
     mutationFn: async ({ id, ...data }: Partial<Expense> & { id: string }) => {
+      // Strip the category field or force it to 'Other' to avoid enum errors
+      const { category, ...safeData } = data as any;
+      const updatePayload = { ...safeData, category: 'Other' as any };
+      
       const { data: expense, error } = await supabase
         .from('expenses')
-        .update(data)
+        .update(updatePayload)
         .eq('id', id)
         .select()
         .single();
