@@ -1,3 +1,8 @@
+export interface SignatureDetail {
+  name: string;
+  title: string;
+}
+
 export interface InvoiceSettings {
   id: string;
   user_id: string;
@@ -13,6 +18,8 @@ export interface InvoiceSettings {
   include_signature_line: boolean;
   invoice_prefix: string;
   next_invoice_number: number;
+  signature_count: number;
+  signature_details: SignatureDetail[];
   created_at: string;
   updated_at: string;
 }
