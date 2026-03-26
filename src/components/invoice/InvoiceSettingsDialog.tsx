@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SignatureDetail } from '@/types/invoice';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
