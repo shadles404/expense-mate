@@ -57,14 +57,12 @@ export function ExpenseTable({
   const handleAddExpense = () => {
     if (!newExpense.description.trim()) return;
 
-    const selectedCat = categories.find(c => c.id === newExpense.category_id);
-    
     onAddExpense({
       project_id: projectId,
       description: newExpense.description,
       quantity: newExpense.quantity,
       price: newExpense.price,
-      category: (selectedCat?.name || 'Other') as any,
+      category: 'Other' as any, // Legacy enum - always 'Other'
       category_id: newExpense.category_id || null,
     });
 
@@ -225,11 +223,9 @@ function ExpenseRow({ expense, index, categories, onUpdate, onDelete }: ExpenseR
 
   const handleCategoryChange = (categoryId: string) => {
     setEditValues({ ...editValues, category_id: categoryId });
-    const cat = categories.find(c => c.id === categoryId);
     onUpdate({
       id: expense.id,
       category_id: categoryId,
-      category: (cat?.name || 'Other') as any,
     });
   };
 
