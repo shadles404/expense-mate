@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { SignatureDetail } from '@/types/invoice';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Settings, Building2 } from 'lucide-react';
@@ -23,7 +24,19 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useInvoiceSettings } from '@/hooks/useInvoiceSettings';
+
+const signatureSchema = z.object({
+  name: z.string().default(''),
+  title: z.string().default(''),
+});
 
 const settingsSchema = z.object({
   company_name: z.string().optional(),
@@ -36,6 +49,8 @@ const settingsSchema = z.object({
   thank_you_message: z.string().default('Thank you for your business!'),
   include_signature_line: z.boolean().default(false),
   invoice_prefix: z.string().default('INV'),
+  signature_count: z.coerce.number().min(1).max(3).default(1),
+  signature_details: z.array(signatureSchema).default([]),
 });
 
 type SettingsFormData = z.infer<typeof settingsSchema>;
@@ -61,6 +76,8 @@ export function InvoiceSettingsDialog({ trigger }: InvoiceSettingsDialogProps) {
       thank_you_message: settings?.thank_you_message || 'Thank you for your business!',
       include_signature_line: settings?.include_signature_line || false,
       invoice_prefix: settings?.invoice_prefix || 'INV',
+      signature_count: settings?.signature_count || 1,
+      signature_details: settings?.signature_details || [{ name: '', title: '' }],
     },
     values: settings ? {
       company_name: settings.company_name || '',
@@ -73,11 +90,32 @@ export function InvoiceSettingsDialog({ trigger }: InvoiceSettingsDialogProps) {
       thank_you_message: settings.thank_you_message,
       include_signature_line: settings.include_signature_line,
       invoice_prefix: settings.invoice_prefix,
+      signature_count: settings.signature_count || 1,
+      signature_details: settings.signature_details?.length ? settings.signature_details : [{ name: '', title: '' }],
     } : undefined,
   });
 
+  const signatureCount = form.watch('signature_count');
+  const includeSignature = form.watch('include_signature_line');
+
+  // Keep signature_details array in sync with signature_count
+  const handleSignatureCountChange = (count: number) => {
+    form.setValue('signature_count', count);
+    const current = form.getValues('signature_details') || [];
+    const updated = Array.from({ length: count }, (_, i) => ({
+      name: current[i]?.name || '',
+      title: current[i]?.title || '',
+    }));
+    form.setValue('signature_details', updated);
+  };
+
   const onSubmit = async (data: SettingsFormData) => {
-    await upsertSettings.mutateAsync(data);
+    // Ensure signature_details matches count
+    const details: SignatureDetail[] = Array.from({ length: data.signature_count }, (_, i) => ({
+      name: data.signature_details?.[i]?.name || '',
+      title: data.signature_details?.[i]?.title || '',
+    }));
+    await upsertSettings.mutateAsync({ ...data, signature_details: details });
     setOpen(false);
   };
 
@@ -265,9 +303,9 @@ export function InvoiceSettingsDialog({ trigger }: InvoiceSettingsDialogProps) {
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel>Include Signature Line</FormLabel>
+                      <FormLabel>Include Signature Lines</FormLabel>
                       <FormDescription>
-                        Add a signature line to the invoice footer
+                        Add signature lines to the invoice footer
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -279,6 +317,50 @@ export function InvoiceSettingsDialog({ trigger }: InvoiceSettingsDialogProps) {
                   </FormItem>
                 )}
               />
+
+              {includeSignature && (
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div>
+                    <FormLabel>Number of Signatures</FormLabel>
+                    <Select
+                      value={String(signatureCount)}
+                      onValueChange={(val) => handleSignatureCountChange(Number(val))}
+                    >
+                      <SelectTrigger className="w-32 mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 Signature</SelectItem>
+                        <SelectItem value="2">2 Signatures</SelectItem>
+                        <SelectItem value="3">3 Signatures</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {Array.from({ length: signatureCount }, (_, i) => (
+                    <div key={i} className="grid grid-cols-2 gap-3 p-3 rounded-md bg-muted/50">
+                      <div>
+                        <FormLabel className="text-xs">Signature {i + 1} - Name</FormLabel>
+                        <Input
+                          placeholder="Full Name"
+                          className="mt-1"
+                          value={form.watch(`signature_details.${i}.name`) || ''}
+                          onChange={(e) => form.setValue(`signature_details.${i}.name`, e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <FormLabel className="text-xs">Title</FormLabel>
+                        <Input
+                          placeholder="e.g., Manager, Director"
+                          className="mt-1"
+                          value={form.watch(`signature_details.${i}.title`) || ''}
+                          onChange={(e) => form.setValue(`signature_details.${i}.title`, e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-2">

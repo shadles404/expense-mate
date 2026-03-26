@@ -135,6 +135,8 @@ export type Database = {
           invoice_prefix: string | null
           logo_url: string | null
           next_invoice_number: number | null
+          signature_count: number | null
+          signature_details: Json | null
           tax_enabled: boolean | null
           tax_rate: number | null
           thank_you_message: string | null
@@ -153,6 +155,8 @@ export type Database = {
           invoice_prefix?: string | null
           logo_url?: string | null
           next_invoice_number?: number | null
+          signature_count?: number | null
+          signature_details?: Json | null
           tax_enabled?: boolean | null
           tax_rate?: number | null
           thank_you_message?: string | null
@@ -171,6 +175,8 @@ export type Database = {
           invoice_prefix?: string | null
           logo_url?: string | null
           next_invoice_number?: number | null
+          signature_count?: number | null
+          signature_details?: Json | null
           tax_enabled?: boolean | null
           tax_rate?: number | null
           thank_you_message?: string | null

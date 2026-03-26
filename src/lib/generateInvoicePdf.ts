@@ -237,12 +237,34 @@ export function generateInvoicePdf(params: GenerateInvoiceParams): jsPDF {
   }
   
   if (settings?.include_signature_line) {
+    const sigCount = settings.signature_count || 1;
+    const sigDetails = settings.signature_details || [];
+    const sigWidth = (pageWidth - 40) / sigCount;
+    
     footerY += 10;
-    doc.setDrawColor(150, 150, 150);
-    doc.line(20, footerY, 80, footerY);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Authorized Signature', 20, footerY + 5);
+    
+    for (let i = 0; i < sigCount; i++) {
+      const xStart = 20 + i * sigWidth;
+      const lineWidth = sigWidth - 20;
+      
+      // Signature line
+      doc.setDrawColor(150, 150, 150);
+      doc.line(xStart, footerY, xStart + lineWidth, footerY);
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      
+      const detail = sigDetails[i];
+      if (detail?.name) {
+        doc.text(detail.name, xStart, footerY + 5);
+      }
+      if (detail?.title) {
+        doc.text(detail.title, xStart, footerY + 10);
+      }
+      if (!detail?.name && !detail?.title) {
+        doc.text('Authorized Signature', xStart, footerY + 5);
+      }
+    }
   }
 
   return doc;
