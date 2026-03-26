@@ -110,9 +110,10 @@ export function InvoiceSettingsDialog({ trigger }: InvoiceSettingsDialogProps) {
 
   const onSubmit = async (data: SettingsFormData) => {
     // Ensure signature_details matches count
-    const details = Array.from({ length: data.signature_count }, (_, i) => 
-      data.signature_details?.[i] || { name: '', title: '' }
-    );
+    const details: SignatureDetail[] = Array.from({ length: data.signature_count }, (_, i) => ({
+      name: data.signature_details?.[i]?.name || '',
+      title: data.signature_details?.[i]?.title || '',
+    }));
     await upsertSettings.mutateAsync({ ...data, signature_details: details });
     setOpen(false);
   };
