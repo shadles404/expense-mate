@@ -101,7 +101,10 @@ export function InvoiceSettingsDialog({ trigger }: InvoiceSettingsDialogProps) {
   const handleSignatureCountChange = (count: number) => {
     form.setValue('signature_count', count);
     const current = form.getValues('signature_details') || [];
-    const updated = Array.from({ length: count }, (_, i) => current[i] || { name: '', title: '' });
+    const updated = Array.from({ length: count }, (_, i) => ({
+      name: current[i]?.name || '',
+      title: current[i]?.title || '',
+    }));
     form.setValue('signature_details', updated);
   };
 

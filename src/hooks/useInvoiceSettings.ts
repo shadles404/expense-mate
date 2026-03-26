@@ -27,7 +27,7 @@ export function useInvoiceSettings() {
           tax_rate: Number(data.tax_rate),
           next_invoice_number: Number(data.next_invoice_number),
           signature_count: data.signature_count || 1,
-          signature_details: (Array.isArray(data.signature_details) ? data.signature_details : []) as InvoiceSettings['signature_details'],
+          signature_details: (Array.isArray(data.signature_details) ? data.signature_details : []) as unknown as InvoiceSettings['signature_details'],
         };
       }
       
