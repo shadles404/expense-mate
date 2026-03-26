@@ -26,6 +26,8 @@ export function useInvoiceSettings() {
           ...data,
           tax_rate: Number(data.tax_rate),
           next_invoice_number: Number(data.next_invoice_number),
+          signature_count: data.signature_count || 1,
+          signature_details: (Array.isArray(data.signature_details) ? data.signature_details : []) as InvoiceSettings['signature_details'],
         };
       }
       
@@ -38,6 +40,12 @@ export function useInvoiceSettings() {
     mutationFn: async (data: Partial<InvoiceSettings>) => {
       if (!user) throw new Error('Not authenticated');
       
+      // Cast signature_details to JSON-compatible type for Supabase
+      const dbData: Record<string, any> = { ...data };
+      if (data.signature_details) {
+        dbData.signature_details = JSON.parse(JSON.stringify(data.signature_details));
+      }
+
       const { data: existingSettings } = await supabase
         .from('invoice_settings')
         .select('id')
@@ -47,7 +55,7 @@ export function useInvoiceSettings() {
       if (existingSettings) {
         const { data: updated, error } = await supabase
           .from('invoice_settings')
-          .update(data)
+          .update(dbData)
           .eq('user_id', user.id)
           .select()
           .single();
@@ -57,7 +65,7 @@ export function useInvoiceSettings() {
       } else {
         const { data: created, error } = await supabase
           .from('invoice_settings')
-          .insert([{ ...data, user_id: user.id }])
+          .insert([{ ...dbData, user_id: user.id }])
           .select()
           .single();
 
