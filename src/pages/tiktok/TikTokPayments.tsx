@@ -189,6 +189,10 @@ export default function TikTokPayments() {
             )}
           </div>
           <div className="flex gap-2 flex-wrap">
+            <TikTokInvoiceDialog
+              payments={filtered}
+              filterLabel={filterMonth !== 'all' ? `TikTok Payments — ${filterMonth}` : 'TikTok Payments'}
+            />
             <Button variant="outline" onClick={handleExportCSV} disabled={filtered.length === 0}>
               <Download className="h-4 w-4 mr-2" />CSV
             </Button>
