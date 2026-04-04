@@ -74,13 +74,18 @@ export function TikTokInvoiceDialog({ payments, filterLabel }: TikTokInvoiceDial
   const discountValue = Number(watchDiscount) || 0;
   const grandTotal = subtotal + taxAmount - discountValue;
 
-  const expenseItems = payments.map((p, index) => ({
-    no: index + 1,
-    description: `${p.advertiser?.name || 'Influencer'} — ${p.campaign_month || 'N/A'}`,
-    quantity: 1,
-    price: p.amount,
-    amount: p.amount,
-  }));
+  const expenseItems = payments.map((p, index) => {
+    const name = p.advertiser?.name || 'Influencer';
+    const phone = p.advertiser?.phone ? ` | Phone: ${p.advertiser.phone}` : '';
+    const target = `${p.completed_videos ?? 0}/${p.total_target_videos ?? 0}`;
+    return {
+      no: index + 1,
+      description: `${name}${phone} — ${p.campaign_month || 'N/A'} — Target: ${target}`,
+      quantity: 1,
+      price: p.amount,
+      amount: p.amount,
+    };
+  });
 
   const handleGenerate = async (data: InvoiceFormData, action: 'download' | 'print' | 'share') => {
     if (!user) {
