@@ -387,6 +387,14 @@ export default function TikTokPayments() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {(canWrite || isAdmin) && (
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>Influencer</TableHead>
                   <TableHead>Campaign</TableHead>
                   <TableHead>Target</TableHead>
