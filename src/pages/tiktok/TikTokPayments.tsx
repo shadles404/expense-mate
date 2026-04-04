@@ -407,7 +407,15 @@ export default function TikTokPayments() {
               </TableHeader>
               <TableBody>
                 {filtered.map(p => (
-                  <TableRow key={p.id}>
+                  <TableRow key={p.id} className={selectedIds.has(p.id) ? 'bg-muted/50' : ''}>
+                    {(canWrite || isAdmin) && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(p.id)}
+                          onCheckedChange={() => toggleSelect(p.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">{p.advertiser?.name || '—'}</TableCell>
                     <TableCell>{p.campaign_month || '—'}</TableCell>
                     <TableCell>{p.total_target_videos}</TableCell>
