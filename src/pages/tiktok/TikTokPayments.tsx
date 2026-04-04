@@ -217,6 +217,11 @@ export default function TikTokPayments() {
             )}
           </div>
           <div className="flex gap-2 flex-wrap">
+            {selectedIds.size > 0 && (canWrite || isAdmin) && (
+              <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                <Trash2 className="h-4 w-4 mr-2" />Delete Selected ({selectedIds.size})
+              </Button>
+            )}
             <TikTokInvoiceDialog
               payments={filtered}
               filterLabel={filterMonth !== 'all' ? `TikTok Payments — ${filterMonth}` : 'TikTok Payments'}
