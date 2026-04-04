@@ -178,7 +178,31 @@ export default function TikTokPayments() {
     })), 'payments');
   };
 
-  const paymentAuditLogs = auditPaymentId ? auditLogs.filter(l => l.payment_id === auditPaymentId) : [];
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(p => p.id)));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    deletePayments.mutate([...selectedIds], {
+      onSuccess: () => {
+        setSelectedIds(new Set());
+        setDeleteDialogOpen(false);
+      },
+    });
+  };
+
 
   return (
     <Layout>
