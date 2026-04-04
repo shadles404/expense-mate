@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +17,7 @@ import { useTikTokPaymentHistory } from '@/hooks/useTikTokPaymentHistory';
 import { useTikTokSettings } from '@/hooks/useTikTokSettings';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
-import { Plus, Search, Download, Zap, Users, DollarSign, Clock, AlertTriangle, Archive, ShieldAlert } from 'lucide-react';
+import { Plus, Search, Download, Zap, Users, DollarSign, Clock, AlertTriangle, Archive, ShieldAlert, Trash2 } from 'lucide-react';
 import { TikTokInvoiceDialog } from '@/components/tiktok/TikTokInvoiceDialog';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
@@ -29,7 +31,7 @@ const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive' | 'o
 };
 
 export default function TikTokPayments() {
-  const { payments, auditLogs, isLoading, createPayment, updatePayment, updatePaymentStatus, autoAddEligible } = useTikTokPayments();
+  const { payments, auditLogs, isLoading, createPayment, updatePayment, updatePaymentStatus, autoAddEligible, deletePayments } = useTikTokPayments();
   const { influencers } = useTikTokAdvertisers();
   const { archivePayments } = useTikTokPaymentHistory();
   const { settings } = useTikTokSettings();
@@ -43,6 +45,8 @@ export default function TikTokPayments() {
   const [search, setSearch] = useState('');
   const [filterMonth, setFilterMonth] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [form, setForm] = useState({
     advertiser_id: '', amount: 0, campaign_month: '', total_target_videos: 0, completed_videos: 0, notes: '',
   });
@@ -174,6 +178,30 @@ export default function TikTokPayments() {
     })), 'payments');
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(p => p.id)));
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    deletePayments.mutate([...selectedIds], {
+      onSuccess: () => {
+        setSelectedIds(new Set());
+        setDeleteDialogOpen(false);
+      },
+    });
+  };
   const paymentAuditLogs = auditPaymentId ? auditLogs.filter(l => l.payment_id === auditPaymentId) : [];
 
   return (
@@ -189,6 +217,11 @@ export default function TikTokPayments() {
             )}
           </div>
           <div className="flex gap-2 flex-wrap">
+            {selectedIds.size > 0 && (canWrite || isAdmin) && (
+              <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                <Trash2 className="h-4 w-4 mr-2" />Delete Selected ({selectedIds.size})
+              </Button>
+            )}
             <TikTokInvoiceDialog
               payments={filtered}
               filterLabel={filterMonth !== 'all' ? `TikTok Payments — ${filterMonth}` : 'TikTok Payments'}
@@ -354,6 +387,14 @@ export default function TikTokPayments() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {(canWrite || isAdmin) && (
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>Influencer</TableHead>
                   <TableHead>Campaign</TableHead>
                   <TableHead>Target</TableHead>
@@ -366,7 +407,15 @@ export default function TikTokPayments() {
               </TableHeader>
               <TableBody>
                 {filtered.map(p => (
-                  <TableRow key={p.id}>
+                  <TableRow key={p.id} className={selectedIds.has(p.id) ? 'bg-muted/50' : ''}>
+                    {(canWrite || isAdmin) && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(p.id)}
+                          onCheckedChange={() => toggleSelect(p.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">{p.advertiser?.name || '—'}</TableCell>
                     <TableCell>{p.campaign_month || '—'}</TableCell>
                     <TableCell>{p.total_target_videos}</TableCell>
@@ -406,7 +455,7 @@ export default function TikTokPayments() {
                   </TableRow>
                 ))}
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={(canWrite || isAdmin) ? 8 : 7} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No payments found'}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={(canWrite || isAdmin) ? 9 : 7} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No payments found'}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -435,6 +484,27 @@ export default function TikTokPayments() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {selectedIds.size} payment(s)?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. The selected payment records will be permanently removed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteSelected}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

@@ -149,5 +149,21 @@ export function useTikTokPayments() {
     onError: (e: Error) => toast({ title: 'Info', description: e.message }),
   });
 
-  return { payments, auditLogs, isLoading, createPayment, updatePayment, updatePaymentStatus, autoAddEligible };
+  const deletePayments = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase
+        .from('tiktok_payments')
+        .delete()
+        .in('id', ids);
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['tiktok-payments'] });
+      toast({ title: `${count} payment(s) deleted` });
+    },
+    onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
+  });
+
+  return { payments, auditLogs, isLoading, createPayment, updatePayment, updatePaymentStatus, autoAddEligible, deletePayments };
 }
