@@ -455,7 +455,7 @@ export default function TikTokPayments() {
                   </TableRow>
                 ))}
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={(canWrite || isAdmin) ? 8 : 7} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No payments found'}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={(canWrite || isAdmin) ? 9 : 7} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No payments found'}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
