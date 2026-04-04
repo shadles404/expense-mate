@@ -45,6 +45,8 @@ export default function TikTokPayments() {
   const [search, setSearch] = useState('');
   const [filterMonth, setFilterMonth] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [form, setForm] = useState({
     advertiser_id: '', amount: 0, campaign_month: '', total_target_videos: 0, completed_videos: 0, notes: '',
   });
