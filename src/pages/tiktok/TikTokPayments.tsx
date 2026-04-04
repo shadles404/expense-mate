@@ -202,7 +202,7 @@ export default function TikTokPayments() {
       },
     });
   };
-
+  const paymentAuditLogs = auditPaymentId ? auditLogs.filter(l => l.payment_id === auditPaymentId) : [];
 
   return (
     <Layout>
