@@ -31,7 +31,7 @@ const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive' | 'o
 };
 
 export default function TikTokPayments() {
-  const { payments, auditLogs, isLoading, createPayment, updatePayment, updatePaymentStatus, autoAddEligible } = useTikTokPayments();
+  const { payments, auditLogs, isLoading, createPayment, updatePayment, updatePaymentStatus, autoAddEligible, deletePayments } = useTikTokPayments();
   const { influencers } = useTikTokAdvertisers();
   const { archivePayments } = useTikTokPaymentHistory();
   const { settings } = useTikTokSettings();
