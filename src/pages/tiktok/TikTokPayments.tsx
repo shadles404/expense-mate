@@ -16,6 +16,7 @@ import { useTikTokSettings } from '@/hooks/useTikTokSettings';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
 import { Plus, Search, Download, Zap, Users, DollarSign, Clock, AlertTriangle, Archive, ShieldAlert } from 'lucide-react';
+import { TikTokInvoiceDialog } from '@/components/tiktok/TikTokInvoiceDialog';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { downloadCSV } from '@/lib/csvExport';
