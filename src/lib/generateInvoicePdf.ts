@@ -122,17 +122,21 @@ export function generateInvoicePdf(params: GenerateInvoiceParams): jsPDF {
   // Expense Table
   yPos += 15;
   
-  const tableData = expenses.map(exp => [
+  const defaultRowMapper = (exp: InvoiceExpenseItem) => [
     exp.no.toString(),
     exp.description,
     exp.quantity.toString(),
     `$${exp.price.toFixed(2)}`,
     `$${exp.amount.toFixed(2)}`,
-  ]);
+  ];
+
+  const rowMapper = params.customRowMapper || defaultRowMapper;
+  const tableData = expenses.map(rowMapper);
+  const headers = params.customHeaders || ['No', 'Description', 'Qty', 'Price', 'Amount'];
 
   autoTable(doc, {
     startY: yPos,
-    head: [['No', 'Description', 'Qty', 'Price', 'Amount']],
+    head: [headers],
     body: tableData,
     theme: 'striped',
     headStyles: {
