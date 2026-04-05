@@ -76,14 +76,14 @@ export function TikTokInvoiceDialog({ payments, filterLabel }: TikTokInvoiceDial
 
   const expenseItems = payments.map((p, index) => {
     const name = p.advertiser?.name || 'Influencer';
-    const phone = p.advertiser?.phone ? ` | Phone: ${p.advertiser.phone}` : '';
-    const target = `${p.completed_videos ?? 0}/${p.total_target_videos ?? 0}`;
+    const phone = p.advertiser?.phone || 'N/A';
+    const target = p.total_target_videos ?? 0;
     return {
       no: index + 1,
-      description: `${name}${phone} — ${p.campaign_month || 'N/A'} — Target: ${target}`,
-      quantity: 1,
+      description: name,
+      quantity: target,
       price: p.amount,
-      amount: p.amount,
+      amount: phone,
     };
   });
 
