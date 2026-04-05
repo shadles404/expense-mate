@@ -17,6 +17,8 @@ interface GenerateInvoiceParams {
   total: number;
   partialPaidAmount?: number;
   remainingBalance?: number;
+  customHeaders?: string[];
+  customRowMapper?: (exp: InvoiceExpenseItem) => string[];
 }
 
 export function generateInvoicePdf(params: GenerateInvoiceParams): jsPDF {
