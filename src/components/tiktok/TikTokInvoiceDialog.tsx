@@ -128,6 +128,8 @@ export function TikTokInvoiceDialog({ payments, filterLabel }: TikTokInvoiceDial
         total: grandTotal,
         partialPaidAmount: 0,
         remainingBalance: grandTotal,
+        customHeaders: tiktokHeaders,
+        customRowMapper: tiktokRowMapper,
       });
 
       // Save invoice record
