@@ -42,86 +42,97 @@ export function generateInvoicePdf(params: GenerateInvoiceParams): jsPDF {
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  let yPos = 20;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginLeft = 14;
+  const marginRight = 14;
+  const contentWidth = pageWidth - marginLeft - marginRight;
 
-  // Header Section
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.text('INVOICE', pageWidth - 20, yPos, { align: 'right' });
+  // ── Header Row: Company name (left) + "INVOICE" (right) ──
+  let yPos = 16;
 
-  // Company Info (Left side)
-  doc.setFontSize(14);
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  const companyName = settings?.company_name || 'Your Company';
-  doc.text(companyName, 20, yPos);
-  
-  yPos += 8;
-  doc.setFontSize(10);
+  doc.text('INVOICE', pageWidth - marginRight, yPos, { align: 'right' });
+
+  doc.setFontSize(13);
+  doc.text(settings?.company_name || 'Your Company', marginLeft, yPos);
+
+  // ── Company details (left) + Invoice meta box (right) ──
+  yPos += 7;
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  
+
+  const companyStartY = yPos;
   if (settings?.company_address) {
-    const addressLines = settings.company_address.split('\n');
-    addressLines.forEach(line => {
-      doc.text(line, 20, yPos);
-      yPos += 5;
+    settings.company_address.split('\n').forEach(line => {
+      doc.text(line, marginLeft, yPos);
+      yPos += 4;
     });
   }
-  
   if (settings?.company_phone) {
-    doc.text(`Phone: ${settings.company_phone}`, 20, yPos);
-    yPos += 5;
+    doc.text(`Phone: ${settings.company_phone}`, marginLeft, yPos);
+    yPos += 4;
   }
-  
   if (settings?.company_email) {
-    doc.text(`Email: ${settings.company_email}`, 20, yPos);
-    yPos += 5;
+    doc.text(`Email: ${settings.company_email}`, marginLeft, yPos);
+    yPos += 4;
   }
 
-  yPos = Math.max(yPos, 50);
-  
-  // Invoice Info Box
-  yPos += 10;
-  doc.setDrawColor(200, 200, 200);
+  // Invoice info box (right-aligned, same vertical area)
+  const boxW = 62;
+  const boxX = pageWidth - marginRight - boxW;
+  const boxY = companyStartY - 3;
+  const boxH = dueDate ? 28 : 22;
+
+  doc.setDrawColor(220, 220, 220);
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(pageWidth - 90, 35, 70, 35, 3, 3, 'F');
-  
+  doc.roundedRect(boxX, boxY, boxW, boxH, 2, 2, 'FD');
+
+  let metaY = boxY + 5;
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Invoice #:', boxX + 4, metaY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoiceNumber, boxX + boxW - 4, metaY, { align: 'right' });
+
+  metaY += 5;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Date:', boxX + 4, metaY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(format(invoiceDate, 'MMM dd, yyyy'), boxX + boxW - 4, metaY, { align: 'right' });
+
+  if (dueDate) {
+    metaY += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Due:', boxX + 4, metaY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(format(dueDate, 'MMM dd, yyyy'), boxX + boxW - 4, metaY, { align: 'right' });
+  }
+
+  // ── Divider ──
+  yPos = Math.max(yPos, boxY + boxH) + 4;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(marginLeft, yPos, pageWidth - marginRight, yPos);
+  yPos += 5;
+
+  // ── Project & Client ──
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('Invoice Number:', pageWidth - 85, 42);
+  doc.text('Project:', marginLeft, yPos);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoiceNumber, pageWidth - 85, 48);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Invoice Date:', pageWidth - 85, 55);
-  doc.setFont('helvetica', 'normal');
-  doc.text(format(invoiceDate, 'MMM dd, yyyy'), pageWidth - 85, 61);
-  
-  if (dueDate) {
-    doc.setFont('helvetica', 'bold');
-    doc.text('Due Date:', pageWidth - 45, 55);
-    doc.setFont('helvetica', 'normal');
-    doc.text(format(dueDate, 'MMM dd, yyyy'), pageWidth - 45, 61);
-  }
+  doc.text(projectTitle, marginLeft + 24, yPos);
 
-  // Project & Client Info
-  yPos = 80;
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Project:', 20, yPos);
-  doc.setFont('helvetica', 'normal');
-  doc.text(projectTitle, 50, yPos);
-  
   if (clientName) {
-    yPos += 7;
+    yPos += 5;
     doc.setFont('helvetica', 'bold');
-    doc.text('Bill To:', 20, yPos);
+    doc.text('Bill To:', marginLeft, yPos);
     doc.setFont('helvetica', 'normal');
-    doc.text(clientName, 50, yPos);
+    doc.text(clientName, marginLeft + 24, yPos);
   }
 
-  // Expense Table
-  yPos += 15;
-  
+  // ── Table ──
+  yPos += 8;
+
   const defaultRowMapper = (exp: InvoiceExpenseItem) => [
     exp.no.toString(),
     exp.description,
@@ -139,136 +150,152 @@ export function generateInvoicePdf(params: GenerateInvoiceParams): jsPDF {
     head: [headers],
     body: tableData,
     theme: 'striped',
+    margin: { left: marginLeft, right: marginRight },
     headStyles: {
       fillColor: [59, 130, 246],
       textColor: 255,
       fontStyle: 'bold',
       halign: 'center',
+      fontSize: 8.5,
+      cellPadding: 2.5,
     },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 15 },
-      1: { halign: 'left', cellWidth: 80 },
-      2: { halign: 'center', cellWidth: 20 },
-      3: { halign: 'right', cellWidth: 30 },
-      4: { halign: 'right', cellWidth: 30 },
+      0: { halign: 'center', cellWidth: 12 },
+      1: { halign: 'left' },
+      2: { halign: 'center', cellWidth: 22 },
+      3: { halign: 'right', cellWidth: 28 },
+      4: { halign: 'right', cellWidth: 32 },
     },
     styles: {
-      fontSize: 10,
-      cellPadding: 4,
+      fontSize: 8,
+      cellPadding: 2,
+      lineColor: [230, 230, 230],
+      lineWidth: 0.2,
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252],
     },
   });
 
-  // Get the final Y position after the table
-  const finalY = (doc as any).lastAutoTable.finalY || yPos + 50;
+  const finalY = (doc as any).lastAutoTable.finalY || yPos + 30;
 
-  // Totals Section
-  let totalsY = finalY + 10;
-  const totalsX = pageWidth - 80;
-  
-  doc.setFontSize(10);
+  // ── Totals (right-aligned block) ──
+  let totalsY = finalY + 6;
+  const totalsX = pageWidth - marginRight - 70;
+  const valX = pageWidth - marginRight;
+
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  
-  doc.text('Subtotal:', totalsX, totalsY);
-  doc.text(`$${subtotal.toFixed(2)}`, pageWidth - 20, totalsY, { align: 'right' });
-  
-  if (settings?.tax_enabled && taxAmount > 0) {
-    totalsY += 7;
-    doc.text(`Tax (${settings.tax_rate}%):`, totalsX, totalsY);
-    doc.text(`$${taxAmount.toFixed(2)}`, pageWidth - 20, totalsY, { align: 'right' });
-  }
-  
-  if (discountAmount > 0) {
-    totalsY += 7;
-    doc.text('Discount:', totalsX, totalsY);
-    doc.text(`-$${discountAmount.toFixed(2)}`, pageWidth - 20, totalsY, { align: 'right' });
-  }
-  
-  // Grand Total
-  totalsY += 10;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(totalsX, totalsY - 3, pageWidth - 20, totalsY - 3);
-  
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Total Amount:', totalsX, totalsY + 4);
-  doc.text(`$${total.toFixed(2)}`, pageWidth - 20, totalsY + 4, { align: 'right' });
 
-  // Partial Payment & Remaining Balance
+  doc.text('Subtotal:', totalsX, totalsY);
+  doc.text(`$${subtotal.toFixed(2)}`, valX, totalsY, { align: 'right' });
+
+  if (settings?.tax_enabled && taxAmount > 0) {
+    totalsY += 5;
+    doc.text(`Tax (${settings.tax_rate}%):`, totalsX, totalsY);
+    doc.text(`$${taxAmount.toFixed(2)}`, valX, totalsY, { align: 'right' });
+  }
+
+  if (discountAmount > 0) {
+    totalsY += 5;
+    doc.text('Discount:', totalsX, totalsY);
+    doc.text(`-$${discountAmount.toFixed(2)}`, valX, totalsY, { align: 'right' });
+  }
+
+  // Grand Total
+  totalsY += 6;
+  doc.setDrawColor(180, 180, 180);
+  doc.line(totalsX, totalsY - 2, valX, totalsY - 2);
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total:', totalsX, totalsY + 3);
+  doc.text(`$${total.toFixed(2)}`, valX, totalsY + 3, { align: 'right' });
+
+  // Partial Payment
   if (partialPaidAmount > 0) {
-    totalsY += 12;
-    doc.setFontSize(10);
+    totalsY += 8;
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(22, 163, 74); // green
-    doc.text('Partial Paid:', totalsX, totalsY);
-    doc.text(`-$${partialPaidAmount.toFixed(2)}`, pageWidth - 20, totalsY, { align: 'right' });
+    doc.setTextColor(22, 163, 74);
+    doc.text('Paid:', totalsX, totalsY);
+    doc.text(`-$${partialPaidAmount.toFixed(2)}`, valX, totalsY, { align: 'right' });
     doc.setTextColor(0, 0, 0);
   }
 
-  totalsY += 10;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(totalsX, totalsY - 3, pageWidth - 20, totalsY - 3);
-  
-  doc.setFontSize(12);
+  // Remaining Balance
+  totalsY += 6;
+  doc.setDrawColor(180, 180, 180);
+  doc.line(totalsX, totalsY - 2, valX, totalsY - 2);
+
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   if (calculatedBalance > 0) {
-    doc.setTextColor(220, 38, 38); // red
+    doc.setTextColor(220, 38, 38);
   } else {
-    doc.setTextColor(22, 163, 74); // green
+    doc.setTextColor(22, 163, 74);
   }
-  doc.text('Remaining Balance:', totalsX, totalsY + 4);
-  doc.text(`$${calculatedBalance.toFixed(2)}`, pageWidth - 20, totalsY + 4, { align: 'right' });
+  doc.text('Balance:', totalsX, totalsY + 3);
+  doc.text(`$${calculatedBalance.toFixed(2)}`, valX, totalsY + 3, { align: 'right' });
   doc.setTextColor(0, 0, 0);
 
-  // Footer Section
-  let footerY = totalsY + 30;
-  
-  if (settings?.default_payment_terms) {
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Payment Terms:', 20, footerY);
-    doc.setFont('helvetica', 'normal');
-    footerY += 5;
-    doc.text(settings.default_payment_terms, 20, footerY);
-    footerY += 10;
+  // ── Footer Section ──
+  let footerY = totalsY + 16;
+
+  // Check if footer content would overflow — add page if needed
+  const estimatedFooterHeight =
+    (settings?.default_payment_terms ? 12 : 0) +
+    (settings?.thank_you_message ? 10 : 0) +
+    (settings?.include_signature_line ? 20 : 0);
+
+  if (footerY + estimatedFooterHeight > pageHeight - 10) {
+    doc.addPage();
+    footerY = 20;
   }
-  
+
+  if (settings?.default_payment_terms) {
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Payment Terms:', marginLeft, footerY);
+    doc.setFont('helvetica', 'normal');
+    footerY += 4;
+    doc.text(settings.default_payment_terms, marginLeft, footerY);
+    footerY += 8;
+  }
+
   if (settings?.thank_you_message) {
-    doc.setFontSize(10);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'italic');
     doc.text(settings.thank_you_message, pageWidth / 2, footerY, { align: 'center' });
-    footerY += 15;
+    footerY += 10;
   }
-  
+
   if (settings?.include_signature_line) {
     const sigCount = settings.signature_count || 1;
     const sigDetails = settings.signature_details || [];
-    const sigWidth = (pageWidth - 40) / sigCount;
-    
-    footerY += 10;
-    
+    const sigWidth = contentWidth / sigCount;
+
+    footerY += 6;
+
     for (let i = 0; i < sigCount; i++) {
-      const xStart = 20 + i * sigWidth;
-      const lineWidth = sigWidth - 20;
-      
-      // Signature line
+      const xStart = marginLeft + i * sigWidth;
+      const lineWidth = sigWidth - 14;
+
       doc.setDrawColor(150, 150, 150);
       doc.line(xStart, footerY, xStart + lineWidth, footerY);
-      
-      doc.setFontSize(8);
+
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
-      
+
       const detail = sigDetails[i];
       if (detail?.name) {
-        doc.text(detail.name, xStart, footerY + 5);
+        doc.text(detail.name, xStart, footerY + 4);
       }
       if (detail?.title) {
-        doc.text(detail.title, xStart, footerY + 10);
+        doc.text(detail.title, xStart, footerY + 8);
       }
       if (!detail?.name && !detail?.title) {
-        doc.text('Authorized Signature', xStart, footerY + 5);
+        doc.text('Authorized Signature', xStart, footerY + 4);
       }
     }
   }
