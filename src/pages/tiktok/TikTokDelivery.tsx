@@ -17,6 +17,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Plus, Search, Pencil, Download, DollarSign, Clock, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { downloadCSV } from '@/lib/csvExport';
+import { TikTokDeliveryInvoiceDialog } from '@/components/tiktok/TikTokDeliveryInvoiceDialog';
 import type { TikTokProductDelivery } from '@/types/tiktok';
 
 const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive'> = {
