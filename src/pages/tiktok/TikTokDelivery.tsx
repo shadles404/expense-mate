@@ -139,6 +139,7 @@ export default function TikTokDelivery() {
             <Button variant="outline" onClick={handleExportCSV} disabled={filtered.length === 0}>
               <Download className="h-4 w-4 mr-2" />CSV
             </Button>
+            <TikTokDeliveryInvoiceDialog deliveries={filtered} filterLabel="Delivery Records" />
             {canWrite && (
               <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
                 <DialogTrigger asChild>
