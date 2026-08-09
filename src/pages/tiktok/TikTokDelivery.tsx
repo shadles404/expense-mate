@@ -17,6 +17,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Plus, Search, Pencil, Download, DollarSign, Clock, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { downloadCSV } from '@/lib/csvExport';
+import { TikTokDeliveryInvoiceDialog } from '@/components/tiktok/TikTokDeliveryInvoiceDialog';
 import type { TikTokProductDelivery } from '@/types/tiktok';
 
 const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive'> = {
@@ -138,6 +139,7 @@ export default function TikTokDelivery() {
             <Button variant="outline" onClick={handleExportCSV} disabled={filtered.length === 0}>
               <Download className="h-4 w-4 mr-2" />CSV
             </Button>
+            <TikTokDeliveryInvoiceDialog deliveries={filtered} filterLabel="Delivery Records" />
             {canWrite && (
               <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) resetForm(); }}>
                 <DialogTrigger asChild>
