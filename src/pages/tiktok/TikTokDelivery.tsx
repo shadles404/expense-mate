@@ -14,10 +14,11 @@ import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokSettings } from '@/hooks/useTikTokSettings';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, Search, Pencil, Download, DollarSign, Clock, ShieldAlert } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Download, DollarSign, Clock, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { downloadCSV } from '@/lib/csvExport';
 import { TikTokDeliveryInvoiceDialog } from '@/components/tiktok/TikTokDeliveryInvoiceDialog';
+import { DeleteConfirmDialog } from '@/components/projects/DeleteConfirmDialog';
 import type { TikTokProductDelivery } from '@/types/tiktok';
 
 const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive'> = {
