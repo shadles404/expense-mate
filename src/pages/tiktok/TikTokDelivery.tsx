@@ -30,15 +30,17 @@ const PAYMENT_STATUS_COLORS: Record<string, 'default' | 'secondary'> = {
 };
 
 export default function TikTokDelivery() {
-  const { productDeliveries, isLoading, createProductDelivery, updateProductDelivery } = useTikTokProductDeliveries();
+  const { productDeliveries, isLoading, createProductDelivery, updateProductDelivery, deleteProductDelivery } = useTikTokProductDeliveries();
   const { influencers } = useTikTokAdvertisers();
   const { settings } = useTikTokSettings();
   const { canWriteSection } = useTikTokSectionPermissions();
   const { isAdmin } = useUserRole();
   const canWrite = canWriteSection('tiktok_delivery');
+  const canDelete = canWrite && isAdmin;
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TikTokProductDelivery | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TikTokProductDelivery | null>(null);
   const [search, setSearch] = useState('');
   const [filterInfluencer, setFilterInfluencer] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
