@@ -14,10 +14,11 @@ import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokSettings } from '@/hooks/useTikTokSettings';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, Search, Pencil, Download, DollarSign, Clock, ShieldAlert } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Download, DollarSign, Clock, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { downloadCSV } from '@/lib/csvExport';
 import { TikTokDeliveryInvoiceDialog } from '@/components/tiktok/TikTokDeliveryInvoiceDialog';
+import { DeleteConfirmDialog } from '@/components/projects/DeleteConfirmDialog';
 import type { TikTokProductDelivery } from '@/types/tiktok';
 
 const STATUS_COLORS: Record<string, 'default' | 'secondary' | 'destructive'> = {
@@ -29,15 +30,17 @@ const PAYMENT_STATUS_COLORS: Record<string, 'default' | 'secondary'> = {
 };
 
 export default function TikTokDelivery() {
-  const { productDeliveries, isLoading, createProductDelivery, updateProductDelivery } = useTikTokProductDeliveries();
+  const { productDeliveries, isLoading, createProductDelivery, updateProductDelivery, deleteProductDelivery } = useTikTokProductDeliveries();
   const { influencers } = useTikTokAdvertisers();
   const { settings } = useTikTokSettings();
   const { canWriteSection } = useTikTokSectionPermissions();
   const { isAdmin } = useUserRole();
   const canWrite = canWriteSection('tiktok_delivery');
+  const canDelete = canWrite && isAdmin;
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TikTokProductDelivery | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<TikTokProductDelivery | null>(null);
   const [search, setSearch] = useState('');
   const [filterInfluencer, setFilterInfluencer] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -303,6 +306,9 @@ export default function TikTokDelivery() {
                     {canWrite && (
                       <TableCell className="text-right">
                         <Button size="icon" variant="ghost" onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></Button>
+                        {canDelete && (
+                          <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(d)}><Trash2 className="h-4 w-4" /></Button>
+                        )}
                       </TableCell>
                     )}
                   </TableRow>
@@ -314,6 +320,18 @@ export default function TikTokDelivery() {
             </Table>
           </CardContent>
         </Card>
+
+        <DeleteConfirmDialog
+          open={!!deleteTarget}
+          onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+          onConfirm={() => {
+            if (deleteTarget) deleteProductDelivery.mutate(deleteTarget.id);
+            setDeleteTarget(null);
+          }}
+          title="Delete Delivery Record"
+          description={`Permanently delete the delivery record for "${deleteTarget?.product_name ?? ''}"? This action cannot be undone.`}
+          isLoading={deleteProductDelivery.isPending}
+        />
       </div>
     </Layout>
   );
