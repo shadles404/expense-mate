@@ -306,6 +306,9 @@ export default function TikTokDelivery() {
                     {canWrite && (
                       <TableCell className="text-right">
                         <Button size="icon" variant="ghost" onClick={() => openEdit(d)}><Pencil className="h-4 w-4" /></Button>
+                        {canDelete && (
+                          <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteTarget(d)}><Trash2 className="h-4 w-4" /></Button>
+                        )}
                       </TableCell>
                     )}
                   </TableRow>
