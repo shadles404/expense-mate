@@ -320,6 +320,18 @@ export default function TikTokDelivery() {
             </Table>
           </CardContent>
         </Card>
+
+        <DeleteConfirmDialog
+          open={!!deleteTarget}
+          onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+          onConfirm={() => {
+            if (deleteTarget) deleteProductDelivery.mutate(deleteTarget.id);
+            setDeleteTarget(null);
+          }}
+          title="Delete Delivery Record"
+          description={`Permanently delete the delivery record for "${deleteTarget?.product_name ?? ''}"? This action cannot be undone.`}
+          isLoading={deleteProductDelivery.isPending}
+        />
       </div>
     </Layout>
   );
