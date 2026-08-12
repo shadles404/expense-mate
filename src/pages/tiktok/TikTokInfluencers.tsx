@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DeleteConfirmDialog } from '@/components/projects/DeleteConfirmDialog';
 import { useTikTokAdvertisers } from '@/hooks/useTikTokAdvertisers';
 import { useTikTokSectionPermissions } from '@/hooks/useModulePermissions';
 import { useContractNotifications } from '@/hooks/useContractNotifications';
@@ -29,6 +31,8 @@ export default function TikTokInfluencers() {
   const [profileInfluencer, setProfileInfluencer] = useState<TikTokInfluencer | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [form, setForm] = useState({
     name: '', phone: '', tiktok_username: '', category: '', target_videos: 0,
     salary: 0, agreement_start_date: '', agreement_end_date: '', notes: '', is_active: true,
@@ -75,6 +79,34 @@ export default function TikTokInfluencers() {
     i.name.toLowerCase().includes(search.toLowerCase()) ||
     (i.tiktok_username || '').toLowerCase().includes(search.toLowerCase())
   );
+
+  const selectedSet = new Set(selectedIds);
+  const visibleSelected = filtered.filter((i) => selectedSet.has(i.id));
+  const allSelected = filtered.length > 0 && visibleSelected.length === filtered.length;
+
+  const toggleAll = (checked: boolean) => {
+    setSelectedIds(checked ? filtered.map((i) => i.id) : []);
+  };
+
+  const toggleOne = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
+  };
+
+  const handleBulkStatus = async (isActive: boolean) => {
+    for (const id of selectedIds) {
+      await updateInfluencer.mutateAsync({ id, is_active: isActive });
+    }
+    setSelectedIds([]);
+  };
+
+  const handleBulkDelete = async () => {
+    for (const id of selectedIds) {
+      await deleteInfluencer.mutateAsync(id);
+    }
+    setSelectedIds([]);
+    setBulkDeleteOpen(false);
+  };
+
 
   const handleExportCSV = () => {
     downloadCSV(filtered.map((i) => ({
@@ -155,11 +187,29 @@ export default function TikTokInfluencers() {
           <Input placeholder="Search influencers..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
 
+        {canWrite && selectedIds.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/40 p-3">
+            <span className="text-sm font-medium">{selectedIds.length} selected</span>
+            <div className="flex-1" />
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatus(true)}>Mark Active</Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkStatus(false)}>Mark Inactive</Button>
+            <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-2" />Delete
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Clear</Button>
+          </div>
+        )}
+
         <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
+                  {canWrite && (
+                    <TableHead className="w-10">
+                      <Checkbox checked={allSelected} onCheckedChange={(c) => toggleAll(!!c)} aria-label="Select all influencers" />
+                    </TableHead>
+                  )}
                   <TableHead>Name</TableHead>
                   <TableHead>Username</TableHead>
                   <TableHead>Category</TableHead>
@@ -172,7 +222,12 @@ export default function TikTokInfluencers() {
               </TableHeader>
               <TableBody>
                 {filtered.map((i) => (
-                  <TableRow key={i.id}>
+                  <TableRow key={i.id} data-state={selectedSet.has(i.id) ? 'selected' : undefined}>
+                    {canWrite && (
+                      <TableCell>
+                        <Checkbox checked={selectedSet.has(i.id)} onCheckedChange={(c) => toggleOne(i.id, !!c)} aria-label={`Select ${i.name}`} />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">{i.name}</TableCell>
                     <TableCell>{i.tiktok_username || '—'}</TableCell>
                     <TableCell>{i.category || '—'}</TableCell>
@@ -196,14 +251,24 @@ export default function TikTokInfluencers() {
                   </TableRow>
                 ))}
                 {filtered.length === 0 && (
-                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No influencers found'}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={canWrite ? 9 : 8} className="text-center text-muted-foreground py-8">{isLoading ? 'Loading...' : 'No influencers found'}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
 
+        <DeleteConfirmDialog
+          open={bulkDeleteOpen}
+          onOpenChange={setBulkDeleteOpen}
+          onConfirm={handleBulkDelete}
+          title="Delete Influencers"
+          description={`Are you sure you want to delete ${selectedIds.length} influencer(s)? This action cannot be undone.`}
+          isLoading={deleteInfluencer.isPending}
+        />
+
         <InfluencerProfileDialog influencer={profileInfluencer} open={profileOpen} onOpenChange={setProfileOpen} />
+
       </div>
     </Layout>
   );
