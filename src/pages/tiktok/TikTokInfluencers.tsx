@@ -31,6 +31,8 @@ export default function TikTokInfluencers() {
   const [profileInfluencer, setProfileInfluencer] = useState<TikTokInfluencer | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [form, setForm] = useState({
     name: '', phone: '', tiktok_username: '', category: '', target_videos: 0,
     salary: 0, agreement_start_date: '', agreement_end_date: '', notes: '', is_active: true,
