@@ -80,6 +80,34 @@ export default function TikTokInfluencers() {
     (i.tiktok_username || '').toLowerCase().includes(search.toLowerCase())
   );
 
+  const selectedSet = new Set(selectedIds);
+  const visibleSelected = filtered.filter((i) => selectedSet.has(i.id));
+  const allSelected = filtered.length > 0 && visibleSelected.length === filtered.length;
+
+  const toggleAll = (checked: boolean) => {
+    setSelectedIds(checked ? filtered.map((i) => i.id) : []);
+  };
+
+  const toggleOne = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
+  };
+
+  const handleBulkStatus = async (isActive: boolean) => {
+    for (const id of selectedIds) {
+      await updateInfluencer.mutateAsync({ id, is_active: isActive });
+    }
+    setSelectedIds([]);
+  };
+
+  const handleBulkDelete = async () => {
+    for (const id of selectedIds) {
+      await deleteInfluencer.mutateAsync(id);
+    }
+    setSelectedIds([]);
+    setBulkDeleteOpen(false);
+  };
+
+
   const handleExportCSV = () => {
     downloadCSV(filtered.map((i) => ({
       Name: i.name,
